@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR" class="h-full bg-slate-950">
+<html lang="pt-BR" class="h-full bg-[#DDD8C4]">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PetLink: CadêMeuPet? - Localizador de Animais Perdidos</title>
+    <title>AuChou: CadêMeuPet? - Localizador de Animais Perdidos</title>
     
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,29 +13,15 @@
             theme: {
                 extend: {
                     colors: {
-                        darkcyan: {
-                            DEFAULT: '#618B25',
-                            hover: '#4e701d',
-                            50: '#f4f8f0',
-                            100: '#e5f0d8',
-                            600: '#618B25',
-                            700: '#4e701d',
-                        },
-                        mint: {
-                            DEFAULT: '#6BD425',
-                            hover: '#58b21e',
-                            50: '#f2fceb',
-                            100: '#e0f9cd',
-                            500: '#6BD425',
-                            600: '#58b21e',
-                        },
-                        lavender: {
-                            DEFAULT: '#42113C',
-                            hover: '#370926',
-                            50: '#f5eff4',
-                            100: '#e9dce8',
-                            500: '#42113C',
-                            700: '#370926',
+                        bone: '#DDD8C4',
+                        celadon: '#A3C9A8',
+                        mutedteal1: '#84B59F',
+                        mutedteal2: '#69A297',
+                        airforce: {
+                            DEFAULT: '#50808E',
+                            hover: '#3f6672',
+                            50: '#f0f5f7',
+                            600: '#50808E'
                         }
                     }
                 }
@@ -51,29 +37,45 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Leaflet CSS & JS for Interactive Map and Pins -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
     <!-- Chart.js for Admin Analytics -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .map-embed-container { height: 100%; min-height: 480px; width: 100%; border-radius: 0.75rem; overflow: hidden; position: relative; }
-        .map-embed-container iframe { width: 100%; height: 100%; border: 0; min-height: 480px; display: block; }
-        .form-map-container { height: 220px; width: 100%; border-radius: 0.75rem; overflow: hidden; position: relative; }
-        .form-map-container iframe { width: 100%; height: 100%; border: 0; min-height: 220px; display: block; }
+        .map-container { height: 100%; min-height: 480px; width: 100%; border-radius: 0.75rem; overflow: hidden; position: relative; z-index: 10; }
+        .form-map-container { height: 240px; width: 100%; border-radius: 0.75rem; overflow: hidden; position: relative; z-index: 10; border: 2px solid #A3C9A8; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #1C0118; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #42113C; border-radius: 3px; }
-        .glass-header { backdrop-filter: blur(8px); background-color: rgba(28, 1, 24, 0.9); }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #DDD8C4; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #84B59F; border-radius: 3px; }
+        .glass-header { backdrop-filter: blur(8px); background-color: rgba(221, 216, 196, 0.95); }
     </style>
 
     <script>
-        // --- GLOBAL APP STATE ---
         let currentUser = {
             isLoggedIn: false,
-            role: 'GUEST', // 'GUEST', 'TUTOR', 'ADMIN'
+            role: 'GUEST',
             name: 'Visitante',
-            email: ''
+            email: '',
+            phone: '',
+            city: '',
+            avatar: ''
         };
+
+        let registeredAccounts = [
+            {
+                email: 'admin@auchou.com',
+                password: 'Admin123!',
+                name: 'Administrador Master',
+                phone: '(15) 99999-9999',
+                city: 'Itapetininga',
+                role: 'ADMIN',
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+            }
+        ];
 
         let petsData = [
             {
@@ -84,7 +86,7 @@
                 breed: 'Golden Retriever',
                 color: 'Dourado',
                 date: '2026-03-10',
-                address: 'Rua das Flores, Bairro Central',
+                address: 'Rua das Flores, Centro, Itapetininga - SP',
                 lat: -23.5905,
                 lng: -48.0512,
                 photo: 'https://images.unsplash.com/photo-1552053831-71594a27632d?auto=format&fit=crop&w=600&q=80',
@@ -93,6 +95,7 @@
                 description: 'Cão dócil, atende pelo nome de Thor. Usando coleira azul. Perdeu-se próximo à praça central.',
                 status: 'Em Busca',
                 reporterName: 'Carlos Silva',
+                reporterEmail: 'carlos@email.com',
                 messages: [
                     { sender: 'Maria Santos', text: 'Olá Carlos! Vi um cão muito parecido perto do supermercado ontem às 18h.', time: '10/03/2026 19:30' },
                     { sender: 'Carlos Silva', text: 'Oi Maria! Muito obrigado pela ajuda! Teria fotos dele?', time: '10/03/2026 19:42' }
@@ -106,7 +109,7 @@
                 breed: 'Siamês',
                 color: 'Creme e Marrom Escuro',
                 date: '2026-03-11',
-                address: 'Av. Brasil, Vila Jardim',
+                address: 'Av. Brasil, Vila Jardim, Itapetininga - SP',
                 lat: -23.5950,
                 lng: -48.0460,
                 photo: 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80',
@@ -115,6 +118,7 @@
                 description: 'Gato muito dócil encontrado assustado no jardim de uma residência. Sem coleira.',
                 status: 'Aguardando Tutor',
                 reporterName: 'Fernanda Lima',
+                reporterEmail: 'admin@auchou.com',
                 messages: [
                     { sender: 'João Pedro', text: 'Boa tarde! Ele possui uma mancha preta no queixo?', time: '11/03/2026 14:10' }
                 ]
@@ -127,7 +131,7 @@
                 breed: 'Calopsita Amarela',
                 color: 'Amarela e Cinza',
                 date: '2026-03-08',
-                address: 'Rua Cel. Fernando, Centro',
+                address: 'Rua Cel. Fernando, Centro, Itapetininga - SP',
                 lat: -23.5870,
                 lng: -48.0560,
                 photo: 'https://images.unsplash.com/photo-1522858547137-f1dcec554f55?auto=format&fit=crop&w=600&q=80',
@@ -136,28 +140,314 @@
                 description: 'Calopsita amarela e cinza, responde por Pipoca e assobia a música do Pica-Pau.',
                 status: 'Reencontrado',
                 reporterName: 'Beatriz Rocha',
+                reporterEmail: 'beatriz@email.com',
                 messages: []
             }
         ];
 
         let activeDetailPet = null;
         let activeChatPetId = null;
-        let speciesChart = null;
-        let speciesHorizontalChart = null;
+        let mainMap = null;
+        let formMap = null;
+        let formMarker = null;
+        let radarMarkersLayer = null;
 
-        function locateUserOnMap() {
-            if (!navigator.geolocation) {
-                showGlobalAlert('Geolocalização não é suportada pelo seu navegador.', 'error');
+        function handleLogin(e) {
+            if (e) e.preventDefault();
+            const email = document.getElementById('login-email').value.trim();
+            const password = document.getElementById('login-password').value;
+            const errorEl = document.getElementById('login-error');
+
+            const account = registeredAccounts.find(acc => acc.email === email && acc.password === password);
+            if (!account) {
+                if (errorEl) {
+                    errorEl.textContent = 'E-mail ou senha inválidos. Verifique seus dados.';
+                    errorEl.classList.remove('hidden');
+                }
                 return;
             }
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    showGlobalAlert('Localização obtida com sucesso! Coordenadas: ' + position.coords.latitude.toFixed(4) + ', ' + position.coords.longitude.toFixed(4), 'success');
-                },
-                (error) => {
-                    showGlobalAlert('Não foi possível obter sua localização. Verifique as permissões de GPS.', 'error');
+
+            if (errorEl) errorEl.classList.add('hidden');
+
+            currentUser = {
+                isLoggedIn: true,
+                role: account.role,
+                name: account.name,
+                email: account.email,
+                phone: account.phone,
+                city: account.city,
+                avatar: account.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+            };
+
+            updateUserUI();
+            document.getElementById('auth-screen').classList.add('hidden');
+            showGlobalAlert(`Bem-vindo(a) de volta, ${currentUser.name}!`, 'success');
+            applyFilters();
+        }
+
+        function openRegisterAccountModal() {
+            document.getElementById('modal-register-account').classList.remove('hidden');
+        }
+
+        function closeRegisterAccountModal() {
+            document.getElementById('modal-register-account').classList.add('hidden');
+            document.getElementById('form-register-account').reset();
+            document.getElementById('reg-acc-error').classList.add('hidden');
+        }
+
+        function handleCreateAccount(e) {
+            e.preventDefault();
+            const name = document.getElementById('reg-acc-name').value.trim();
+            const email = document.getElementById('reg-acc-email').value.trim();
+            const password = document.getElementById('reg-acc-password').value;
+            const phone = document.getElementById('reg-acc-phone').value.trim();
+            const city = document.getElementById('reg-acc-city').value.trim();
+            const errorEl = document.getElementById('reg-acc-error');
+
+            const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
+            if (!passwordRegex.test(password)) {
+                errorEl.textContent = 'A senha deve ter no mínimo 8 dígitos, contendo pelo menos 1 letra maiúscula e 1 número.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            if (registeredAccounts.some(acc => acc.email === email)) {
+                errorEl.textContent = 'Este e-mail já está cadastrado no sistema.';
+                errorEl.classList.remove('hidden');
+                return;
+            }
+
+            const newAccount = {
+                email,
+                password,
+                name,
+                phone,
+                city,
+                role: 'TUTOR',
+                avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80'
+            };
+
+            registeredAccounts.push(newAccount);
+            closeRegisterAccountModal();
+            showGlobalAlert('Conta criada com sucesso! Faça login para entrar no sistema.', 'success');
+            document.getElementById('login-email').value = email;
+            document.getElementById('login-password').value = '';
+        }
+
+        function handleLogout() {
+            currentUser = {
+                isLoggedIn: false,
+                role: 'GUEST',
+                name: 'Visitante',
+                email: '',
+                phone: '',
+                city: '',
+                avatar: ''
+            };
+            document.getElementById('auth-screen').classList.remove('hidden');
+            document.getElementById('login-email').value = '';
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-error').classList.add('hidden');
+        }
+
+        function updateUserUI() {
+            const nameEl = document.getElementById('user-display-name');
+            const roleEl = document.getElementById('user-display-role');
+            const avatarEl = document.getElementById('user-display-avatar');
+            const adminNavBtn = document.getElementById('nav-admin-btn');
+
+            if (nameEl) nameEl.textContent = currentUser.name;
+            if (roleEl) roleEl.textContent = currentUser.role === 'ADMIN' ? 'Administrador' : 'Tutor';
+            if (avatarEl && currentUser.avatar) {
+                avatarEl.src = currentUser.avatar;
+            }
+
+            if (adminNavBtn) {
+                if (currentUser.role === 'ADMIN') {
+                    adminNavBtn.classList.remove('hidden');
+                } else {
+                    adminNavBtn.classList.add('hidden');
                 }
-            );
+            }
+        }
+
+        function showGlobalAlert(message, type = 'success') {
+            const alertBox = document.getElementById('global-alert');
+            const alertText = document.getElementById('global-alert-text');
+            if (!alertBox || !alertText) return;
+
+            alertText.textContent = message;
+            alertBox.className = `fixed bottom-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-medium transition transform translate-y-0 opacity-100 ${
+                type === 'success' ? 'bg-[#50808E] text-white border border-[#3f6672]' : 'bg-red-600 text-white'
+            }`;
+            alertBox.classList.remove('hidden');
+
+            setTimeout(() => {
+                alertBox.classList.add('hidden');
+            }, 4000);
+        }
+
+        function initMaps() {
+            // Main Radar Map initialization
+            if (!mainMap && document.getElementById('map')) {
+                mainMap = L.map('map').setView([-23.5905, -48.0512], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(mainMap);
+                radarMarkersLayer = L.layerGroup().addTo(mainMap);
+                updateRadarPins();
+            }
+
+            // Form Map initialization
+            if (!formMap && document.getElementById('form-map')) {
+                formMap = L.map('form-map').setView([-23.5905, -48.0512], 14);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(formMap);
+
+                formMarker = L.marker([-23.5905, -48.0512], { draggable: true }).addTo(formMap);
+                
+                formMarker.on('dragend', function(e) {
+                    const pos = formMarker.getLatLng();
+                    document.getElementById('pet-lat').value = pos.lat.toFixed(6);
+                    document.getElementById('pet-lng').value = pos.lng.toFixed(6);
+                    reverseGeocode(pos.lat, pos.lng);
+                });
+
+                formMap.on('click', function(e) {
+                    formMarker.setLatLng(e.latlng);
+                    document.getElementById('pet-lat').value = e.latlng.lat.toFixed(6);
+                    document.getElementById('pet-lng').value = e.latlng.lng.toFixed(6);
+                    reverseGeocode(e.latlng.lat, e.latlng.lng);
+                });
+            }
+        }
+
+        function updateRadarPins() {
+            if (!radarMarkersLayer) return;
+            radarMarkersLayer.clearLayers();
+
+            const filtered = getFilteredPets();
+            filtered.forEach(pet => {
+                if (pet.lat && pet.lng) {
+                    const colorHex = pet.category === 'PERDI' ? '#50808E' : '#69A297';
+                    const customIcon = L.divIcon({
+                        className: 'custom-map-pin',
+                        html: `<div style="background-color: ${colorHex}; width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 6px rgba(0,0,0,0.3); color: white; font-size: 11px; font-weight: bold;"><i class="fa-solid fa-paw"></i></div>`,
+                        iconSize: [28, 28],
+                        iconAnchor: [14, 14]
+                    });
+
+                    const marker = L.marker([pet.lat, pet.lng], { icon: customIcon });
+                    marker.bindPopup(`
+                        <div class="p-2 max-w-xs">
+                            <img src="${pet.photo}" class="w-full h-24 object-cover rounded-lg mb-2" onerror="this.src='https://placehold.co/200x150/A3C9A8/333333?text=Pet'">
+                            <span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">${pet.category === 'PERDI' ? '🔴 Perdidinho' : '🔵 Encontrado'}</span>
+                            <h4 class="font-bold text-sm text-slate-800 mt-1">${pet.name} (${pet.species})</h4>
+                            <p class="text-xs text-slate-600 mt-1"><i class="fa-solid fa-location-dot"></i> ${pet.address}</p>
+                            <button onclick="openPetDetails('${pet.id}')" class="mt-2 w-full bg-[#50808E] text-white text-xs py-1.5 rounded font-medium">Ver Detalhes</button>
+                        </div>
+                    `);
+                    radarMarkersLayer.addLayer(marker);
+                }
+            });
+        }
+
+        function searchAddressOnMap() {
+            const addressInput = document.getElementById('pet-address').value.trim();
+            if (!addressInput) {
+                showGlobalAlert('Digite um endereço para buscar no mapa.', 'error');
+                return;
+            }
+
+            const queryUrl = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(addressInput + ', Itapetininga, SP, Brasil')}`;
+            
+            fetch(queryUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const lat = parseFloat(data[0].lat);
+                        const lon = parseFloat(data[0].lon);
+                        
+                        if (formMap && formMarker) {
+                            formMap.setView([lat, lon], 16);
+                            formMarker.setLatLng([lat, lon]);
+                            document.getElementById('pet-lat').value = lat.toFixed(6);
+                            document.getElementById('pet-lng').value = lon.toFixed(6);
+                            showGlobalAlert('Localização encontrada e marcada no mapa!', 'success');
+                        }
+                    } else {
+                        showGlobalAlert('Endereço não encontrado com precisão. Tente ajustar o texto ou clique diretamente no mapa.', 'error');
+                    }
+                })
+                .catch(() => {
+                    showGlobalAlert('Erro ao buscar o endereço.', 'error');
+                });
+        }
+
+        function reverseGeocode(lat, lng) {
+            const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`;
+            fetch(url)
+                .then(res => res.json())
+                .then(data => {
+                    if (data && data.display_name) {
+                        document.getElementById('pet-address').value = data.display_name;
+                    }
+                })
+                .catch(() => {});
+        }
+
+        function handleRegisterPet(e) {
+            e.preventDefault();
+            const category = document.getElementById('pet-category').value;
+            const name = document.getElementById('pet-name').value.trim();
+            const species = document.getElementById('pet-species').value;
+            const breed = document.getElementById('pet-breed').value.trim();
+            const color = document.getElementById('pet-color').value.trim();
+            const date = document.getElementById('pet-date').value;
+            const address = document.getElementById('pet-address').value.trim();
+            const lat = parseFloat(document.getElementById('pet-lat').value) || -23.5905;
+            const lng = parseFloat(document.getElementById('pet-lng').value) || -48.0512;
+            const reward = document.getElementById('pet-reward').value.trim();
+            const description = document.getElementById('pet-description').value.trim();
+            const contact = document.getElementById('pet-contact').value.trim() || currentUser.phone || '(15) 99999-9999';
+
+            let photoUrl = document.getElementById('pet-photo').value.trim();
+            if (!photoUrl) {
+                photoUrl = species === 'Cão' 
+                    ? 'https://images.unsplash.com/photo-1543466835-00a7907e9de1?auto=format&fit=crop&w=600&q=80'
+                    : 'https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?auto=format&fit=crop&w=600&q=80';
+            }
+
+            const newId = 'PRT-' + Math.floor(10000 + Math.random() * 90000);
+
+            const newPet = {
+                id: newId,
+                category,
+                name,
+                species,
+                breed,
+                color,
+                date,
+                address,
+                lat,
+                lng,
+                photo: photoUrl,
+                contact,
+                reward: reward || 'Não há',
+                description,
+                status: category === 'PERDI' ? 'Em Busca' : 'Aguardando Tutor',
+                reporterName: currentUser.isLoggedIn ? currentUser.name : 'Anônimo',
+                reporterEmail: currentUser.isLoggedIn ? currentUser.email : 'anonimo@email.com',
+                messages: []
+            };
+
+            petsData.unshift(newPet);
+            document.getElementById('form-register-pet').reset();
+            switchTab('list-view');
+            showGlobalAlert(`Ocorrência ${newId} cadastrada com sucesso!`, 'success');
         }
 
         function getFilteredPets() {
@@ -179,7 +469,8 @@
                     pet.name.toLowerCase().includes(searchText) ||
                     pet.breed.toLowerCase().includes(searchText) ||
                     pet.address.toLowerCase().includes(searchText) ||
-                    pet.id.toLowerCase().includes(searchText)
+                    pet.id.toLowerCase().includes(searchText) ||
+                    pet.color.toLowerCase().includes(searchText)
                 )) return false;
                 return true;
             });
@@ -187,24 +478,47 @@
 
         function applyFilters() {
             renderCasesGrid();
+            updateRadarPins();
         }
 
         function switchTab(tabId) {
+            if (tabId === 'admin-view' && currentUser.role !== 'ADMIN') {
+                showGlobalAlert('Acesso restrito a administradores.', 'error');
+                return;
+            }
+
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             const selectedTab = document.getElementById(`tab-${tabId}`);
             if (selectedTab) selectedTab.classList.remove('hidden');
 
             document.querySelectorAll('.nav-btn').forEach(btn => {
-                btn.classList.remove('active', 'bg-[#370926]', 'text-[#6BD425]');
+                btn.classList.remove('active', 'bg-[#50808E]', 'text-white');
+                btn.classList.add('text-slate-700');
                 if (btn.dataset.tab === tabId) {
-                    btn.classList.add('active', 'bg-[#370926]', 'text-[#6BD425]');
+                    btn.classList.add('active', 'bg-[#50808E]', 'text-white');
+                    btn.classList.remove('text-slate-700');
                 }
             });
 
             if (tabId === 'list-view') {
                 renderCasesGrid();
+            } else if (tabId === 'map-view') {
+                setTimeout(() => {
+                    if (mainMap) {
+                        mainMap.invalidateSize();
+                        updateRadarPins();
+                    }
+                }, 200);
+            } else if (tabId === 'register-view') {
+                setTimeout(() => {
+                    if (formMap) {
+                        formMap.invalidateSize();
+                    }
+                }, 200);
             } else if (tabId === 'messages-view') {
                 renderChatThreads();
+            } else if (tabId === 'profile-view') {
+                renderProfileView();
             } else if (tabId === 'admin-view') {
                 renderAdminDashboard();
             }
@@ -232,43 +546,48 @@
 
             filteredPets.forEach(pet => {
                 const isLost = pet.category === 'PERDI';
-                const badgeBg = isLost ? 'bg-[#42113C] border border-[#6BD425]/40 text-[#6BD425]' : 'bg-[#618B25] text-white';
+                const badgeBg = isLost ? 'bg-[#50808E] text-white' : 'bg-[#69A297] text-white';
                 const statusColor = pet.status === 'Reencontrado' 
-                    ? 'text-[#6BD425] bg-[#370926] border-[#6BD425]/40' 
-                    : 'text-slate-300 bg-[#370926] border-[#42113C]';
+                    ? 'text-[#50808E] bg-[#f0f5f7] border-[#84B59F]' 
+                    : 'text-slate-700 bg-white border-[#A3C9A8]';
 
                 const cardHtml = `
-                    <div class="bg-[#1C0118] rounded-2xl shadow-sm border border-[#370926] overflow-hidden hover:shadow-md transition flex flex-col">
-                        <div class="relative h-48 bg-[#370926]">
-                            <img src="${pet.photo}" alt="${pet.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x300/370926/ffffff?text=Sem+Foto'">
+                    <div class="bg-white rounded-2xl shadow-sm border border-[#A3C9A8] overflow-hidden hover:shadow-md transition flex flex-col">
+                        <div class="relative h-48 bg-[#DDD8C4]">
+                            <img src="${pet.photo}" alt="${pet.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x300/A3C9A8/333333?text=Sem+Foto'">
                             <span class="absolute top-3 left-3 ${badgeBg} font-bold text-xs px-3 py-1 rounded-full shadow-md">
                                 ${pet.category === 'PERDI' ? '🔴 PERDI UM PET' : '🔵 ACHEI UM PET'}
                             </span>
-                            <span class="absolute top-3 right-3 bg-[#1C0118]/80 backdrop-blur-md text-slate-200 font-mono text-[10px] px-2 py-0.5 rounded-md border border-[#42113C]">
+                            <span class="absolute top-3 right-3 bg-white/95 backdrop-blur-md text-slate-800 font-mono text-[10px] px-2 py-0.5 rounded-md border border-[#A3C9A8]">
                                 ${pet.id}
                             </span>
                         </div>
                         <div class="p-5 flex-1 flex flex-col justify-between space-y-3">
                             <div>
                                 <div class="flex justify-between items-start">
-                                    <h3 class="font-bold text-lg text-slate-100">${pet.name}</h3>
+                                    <h3 class="font-bold text-lg text-slate-900">${pet.name}</h3>
                                     <span class="text-xs px-2.5 py-1 rounded-full font-semibold border ${statusColor}">
                                         ${pet.status}
                                     </span>
                                 </div>
-                                <p class="text-xs text-slate-400 mt-0.5">${pet.species} • ${pet.breed || 'SRD'}</p>
-                                <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-300 bg-[#370926]/60 px-2.5 py-1 rounded-lg border border-[#42113C]">
-                                    <i class="fa-solid fa-palette text-[#6BD425]"></i>
-                                    <span>Cor: <strong class="text-white">${pet.color || 'Não informada'}</strong></span>
+                                <p class="text-xs text-slate-600 mt-0.5">${pet.species} • ${pet.breed || 'SRD'}</p>
+                                <div class="mt-2 flex items-center gap-1.5 text-xs text-slate-700 bg-[#f0f5f7] px-2.5 py-1 rounded-lg border border-[#A3C9A8]/40">
+                                    <i class="fa-solid fa-palette text-[#50808E]"></i>
+                                    <span>Cor: <strong class="text-slate-900">${pet.color || 'Não informada'}</strong></span>
                                 </div>
-                                <p class="text-xs text-slate-300 mt-2 line-clamp-2"><i class="fa-solid fa-location-dot text-[#6BD425] mr-1"></i> ${pet.address}</p>
+                                <p class="text-xs text-slate-600 mt-2 line-clamp-2"><i class="fa-solid fa-location-dot text-[#50808E] mr-1"></i> ${pet.address}</p>
                             </div>
                             
-                            <div class="pt-2 border-t border-[#370926] flex items-center justify-between text-xs">
+                            <div class="pt-2 border-t border-[#DDD8C4] flex items-center justify-between text-xs gap-2">
                                 <span class="text-slate-500"><i class="fa-regular fa-calendar mr-1"></i> ${pet.date}</span>
-                                <button onclick="openPetDetails('${pet.id}')" class="bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 font-medium px-3.5 py-1.5 rounded-lg transition shadow-sm">
-                                    Ver Detalhes
-                                </button>
+                                <div class="flex gap-2">
+                                    <button onclick="openChatWithPet('${pet.id}')" class="bg-[#A3C9A8] hover:bg-[#84B59F] text-slate-900 font-medium px-3 py-1.5 rounded-lg transition shadow-sm" title="Conversar com o Tutor">
+                                        <i class="fa-solid fa-comments"></i>
+                                    </button>
+                                    <button onclick="openPetDetails('${pet.id}')" class="bg-[#50808E] hover:bg-[#3f6672] text-white font-medium px-3.5 py-1.5 rounded-lg transition shadow-sm">
+                                        Ver Detalhes
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -284,8 +603,8 @@
             activeDetailPet = pet;
 
             const headerBg = pet.category === 'PERDI' 
-                ? 'bg-gradient-to-r from-[#42113C] to-[#370926]' 
-                : 'bg-gradient-to-r from-[#618B25] to-[#4e701d]';
+                ? 'bg-gradient-to-r from-[#50808E] to-[#3f6672]' 
+                : 'bg-gradient-to-r from-[#69A297] to-[#84B59F]';
             const headerEl = document.getElementById('modal-details-header');
             if (headerEl) headerEl.className = `p-6 text-white flex justify-between items-start ${headerBg}`;
 
@@ -294,7 +613,7 @@
             document.getElementById('detail-pet-name').textContent = pet.name;
             document.getElementById('detail-species-breed').textContent = `${pet.species} • ${pet.breed || 'Sem raça definida'}`;
             document.getElementById('detail-image').src = pet.photo;
-            document.getElementById('detail-location').innerHTML = `<i class="fa-solid fa-location-dot text-[#6BD425] mr-1"></i> ${pet.address}`;
+            document.getElementById('detail-location').innerHTML = `<i class="fa-solid fa-location-dot text-[#50808E] mr-1"></i> ${pet.address}`;
             document.getElementById('detail-date').textContent = pet.date;
             document.getElementById('detail-status').textContent = pet.status;
             document.getElementById('detail-description').textContent = pet.description || 'Nenhuma informação adicional cadastrada.';
@@ -316,964 +635,837 @@
             activeDetailPet = null;
         }
 
-        function openRegisterModal() {
-            document.getElementById('modal-register').classList.remove('hidden');
-            const dateField = document.getElementById('reg-date');
-            if (dateField) dateField.valueAsDate = new Date();
-        }
-
-        function closeRegisterModal() {
-            document.getElementById('modal-register').classList.add('hidden');
-        }
-
-        function loadSamplePhoto() {
-            const samples = [
-                'https://images.unsplash.com/photo-1583511655857-d19b40a7a54e?auto=format&fit=crop&w=600&q=80',
-                'https://images.unsplash.com/photo-1573865526739-10659fec78a5?auto=format&fit=crop&w=600&q=80',
-                'https://images.unsplash.com/photo-1535930891776-0c2dfb7fda1a?auto=format&fit=crop&w=600&q=80'
-            ];
-            const randomPhoto = samples[Math.floor(Math.random() * samples.length)];
-            document.getElementById('reg-photo').value = randomPhoto;
-            previewRegistrationPhoto();
-        }
-
-        function previewRegistrationPhoto() {
-            const url = document.getElementById('reg-photo').value;
-            const container = document.getElementById('photo-preview-container');
-            const img = document.getElementById('photo-preview');
-
-            if (url && container && img) {
-                img.src = url;
-                container.classList.remove('hidden');
-            } else if (container) {
-                container.classList.add('hidden');
-            }
-        }
-
-        function handlePetRegistration(e) {
-            e.preventDefault();
-
-            const catRadio = document.querySelector('input[name="reg-category"]:checked');
-            const category = catRadio ? catRadio.value : 'PERDI';
-            const name = document.getElementById('reg-name').value;
-            const species = document.getElementById('reg-species').value;
-            const breed = document.getElementById('reg-breed').value;
-            const color = document.getElementById('reg-color').value;
-            const date = document.getElementById('reg-date').value;
-            const address = document.getElementById('reg-address').value;
-            const photo = document.getElementById('reg-photo').value || 'https://placehold.co/400x300/e2e8f0/475569?text=Sem+Foto';
-            const contact = document.getElementById('reg-contact').value;
-            const reward = document.getElementById('reg-reward').value || 'Não há';
-            const description = document.getElementById('reg-description').value;
-
-            const lat = -23.5910 + (Math.random() - 0.5) * 0.02;
-            const lng = -48.0520 + (Math.random() - 0.5) * 0.02;
-            const protocolId = `PRT-${Math.floor(10000 + Math.random() * 90000)}`;
-
-            const newPet = {
-                id: protocolId,
-                category,
-                name,
-                species,
-                breed,
-                color,
-                date,
-                address,
-                lat,
-                lng,
-                photo,
-                contact,
-                reward,
-                description,
-                status: category === 'PERDI' ? 'Em Busca' : 'Aguardando Tutor',
-                reporterName: currentUser.isLoggedIn ? currentUser.name : 'Tutor Visitante',
-                messages: []
-            };
-
-            petsData.unshift(newPet);
-            closeRegisterModal();
-            document.getElementById('register-pet-form').reset();
-            document.getElementById('photo-preview-container').classList.add('hidden');
-
-            showGlobalAlert(`Ocorrência registrada com sucesso! Protocolo: ${protocolId}`, 'success');
-            applyFilters();
-            switchTab('map-view');
-        }
-
-        function openChatThread(petId) {
-            activeChatPetId = petId;
-            renderChatThreads();
-
+        function openChatWithPet(petId) {
             const pet = petsData.find(p => p.id === petId);
             if (!pet) return;
 
-            document.getElementById('chat-empty-view').classList.add('hidden');
-            document.getElementById('chat-active-view').classList.remove('hidden');
-
-            document.getElementById('chat-header-avatar').textContent = pet.name.charAt(0).toUpperCase();
-            document.getElementById('chat-header-title').textContent = `${pet.name} (${pet.species})`;
-            document.getElementById('chat-header-protocol').textContent = `Protocolo: ${pet.id} • Tutor: ${pet.reporterName}`;
-            document.getElementById('chat-header-badge').textContent = pet.category === 'PERDI' ? '🔴 PET PERDIDO' : '🔵 PET ENCONTRADO';
-
-            renderChatMessages();
+            activeChatPetId = pet.id;
+            closeDetailsModal();
+            switchTab('messages-view');
         }
 
-        function renderChatMessages() {
-            const body = document.getElementById('chat-messages-body');
-            if (!body) return;
-            body.innerHTML = '';
+        function renderChatThreads() {
+            const listContainer = document.getElementById('chat-threads-list');
+            if (!listContainer) return;
 
-            const pet = petsData.find(p => p.id === activeChatPetId);
-            if (!pet || !pet.messages) return;
+            listContainer.innerHTML = '';
 
-            if (pet.messages.length === 0) {
-                body.innerHTML = '<div class="text-center text-xs text-slate-400 py-6">Inicie a conversa sobre este animal.</div>';
+            if (petsData.length === 0) {
+                listContainer.innerHTML = '<p class="text-xs text-slate-500 p-4">Nenhum caso cadastrado.</p>';
                 return;
             }
 
-            pet.messages.forEach(msg => {
-                const isMe = msg.sender === (currentUser.isLoggedIn ? currentUser.name : 'Visitante');
-                const align = isMe ? 'justify-end' : 'justify-start';
-                const bg = isMe ? 'bg-[#6BD425] text-slate-950 font-medium' : 'bg-[#370926] border border-[#42113C] text-slate-200';
+            if (!activeChatPetId && petsData.length > 0) {
+                activeChatPetId = petsData[0].id;
+            }
 
-                const msgHtml = `
-                    <div class="flex ${align}">
-                        <div class="max-w-[80%] rounded-2xl px-4 py-2.5 shadow-sm ${bg}">
-                            <div class="flex items-center gap-2 mb-1">
-                                <span class="text-[10px] font-bold ${isMe ? 'text-slate-900' : 'text-[#6BD425]'}">${msg.sender}</span>
-                                <span class="text-[9px] ${isMe ? 'text-slate-800' : 'text-slate-400'}">${msg.time}</span>
+            petsData.forEach(pet => {
+                const isActive = pet.id === activeChatPetId;
+                const activeClass = isActive ? 'bg-[#A3C9A8]/40 border-[#50808E]' : 'bg-white border-[#DDD8C4] hover:bg-[#f0f5f7]';
+                const lastMsg = pet.messages && pet.messages.length > 0 ? pet.messages[pet.messages.length - 1].text : 'Nenhuma mensagem ainda. Inicie a conversa!';
+
+                const threadHtml = `
+                    <div onclick="selectChatThread('${pet.id}')" class="p-4 rounded-xl border ${activeClass} cursor-pointer transition flex items-center gap-3 shadow-sm">
+                        <img src="${pet.photo}" alt="${pet.name}" class="w-12 h-12 rounded-full object-cover border border-[#84B59F]" onerror="this.src='https://placehold.co/100x100/A3C9A8/333333?text=Pet'">
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-center">
+                                <h4 class="font-bold text-sm text-slate-800 truncate">${pet.name} (${pet.id})</h4>
+                                <span class="text-[10px] text-slate-500">${pet.category}</span>
                             </div>
-                            <p class="text-xs leading-relaxed">${msg.text}</p>
+                            <p class="text-xs text-slate-600 truncate mt-0.5">Tutor: ${pet.reporterName}</p>
+                            <p class="text-[11px] text-slate-500 truncate mt-1 italic">${lastMsg}</p>
                         </div>
                     </div>
                 `;
-                body.innerHTML += msgHtml;
+                listContainer.innerHTML += threadHtml;
             });
 
-            body.scrollTop = body.scrollHeight;
+            renderActiveChatBox();
         }
 
-        function sendChatMessage(e) {
-            e.preventDefault();
-            const input = document.getElementById('chat-input-text');
-            if (!input) return;
-            const text = input.value.trim();
-            if (!text || !activeChatPetId) return;
+        function selectChatThread(petId) {
+            activeChatPetId = petId;
+            renderChatThreads();
+        }
+
+        function renderActiveChatBox() {
+            const chatArea = document.getElementById('active-chat-area');
+            if (!chatArea) return;
+
+            const pet = petsData.find(p => p.id === activeChatPetId);
+            if (!pet) {
+                chatArea.innerHTML = '<div class="flex-1 flex items-center justify-center text-slate-500 text-sm">Selecione uma conversa ao lado.</div>';
+                return;
+            }
+
+            let messagesHtml = '';
+            if (!pet.messages || pet.messages.length === 0) {
+                messagesHtml = '<div class="text-center text-slate-500 text-xs my-auto py-12"><i class="fa-regular fa-comment-dots text-3xl mb-2 text-[#50808E]"></i><p>Inicie a conversa com o tutor(a) <strong>' + pet.reporterName + '</strong> sobre o pet <strong>' + pet.name + '</strong>.</p></div>';
+            } else {
+                pet.messages.forEach(msg => {
+                    const isMe = msg.sender === currentUser.name || msg.sender === 'Você';
+                    const bubbleAlign = isMe ? 'ml-auto bg-[#50808E] text-white rounded-br-none' : 'mr-auto bg-white text-slate-800 border border-[#A3C9A8] rounded-bl-none';
+                    messagesHtml += `
+                        <div class="max-w-[80%] rounded-2xl px-4 py-3 text-xs shadow-sm ${bubbleAlign}">
+                            <div class="flex justify-between items-center gap-4 mb-1 text-[10px] opacity-80 font-medium">
+                                <span>${msg.sender}</span>
+                                <span>${msg.time}</span>
+                            </div>
+                            <p class="leading-relaxed">${msg.text}</p>
+                        </div>
+                    `;
+                });
+            }
+
+            chatArea.innerHTML = `
+                <div class="p-4 bg-white border-b border-[#DDD8C4] flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <img src="${pet.photo}" class="w-10 h-10 rounded-full object-cover border border-[#84B59F]" onerror="this.src='https://placehold.co/100x100/A3C9A8/333333?text=Pet'">
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800">${pet.name} <span class="text-xs font-normal text-slate-500">(${pet.id})</span></h4>
+                            <p class="text-xs text-slate-600"><i class="fa-solid fa-location-dot text-[#50808E]"></i> ${pet.address}</p>
+                        </div>
+                    </div>
+                    <span class="text-xs bg-[#f0f5f7] text-[#50808E] px-3 py-1 rounded-full border border-[#84B59F] font-semibold">${pet.status}</span>
+                </div>
+                <div id="chat-messages-scroll" class="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar flex flex-col">
+                    ${messagesHtml}
+                </div>
+                <div class="p-4 bg-white border-t border-[#DDD8C4] flex gap-2">
+                    <input type="text" id="chat-input-message" placeholder="Escreva sua mensagem ou pista..." class="flex-1 bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#50808E]" onkeypress="if(event.key==='Enter') sendChatMessage()">
+                    <button onclick="sendChatMessage()" class="bg-[#50808E] hover:bg-[#3f6672] text-white px-5 py-2.5 rounded-xl text-xs font-semibold shadow-sm transition">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            `;
+
+            const scrollEl = document.getElementById('chat-messages-scroll');
+            if (scrollEl) scrollEl.scrollTop = scrollEl.scrollHeight;
+        }
+
+        function sendChatMessage() {
+            const inputEl = document.getElementById('chat-input-message');
+            if (!inputEl) return;
+            const text = inputEl.value.trim();
+            if (!text) return;
 
             const pet = petsData.find(p => p.id === activeChatPetId);
             if (!pet) return;
 
-            if (!pet.messages) pet.messages = [];
-
             const now = new Date();
-            const formattedTime = `${now.toLocaleDateString()} ${now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            const timeStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+            if (!pet.messages) pet.messages = [];
             pet.messages.push({
-                sender: currentUser.isLoggedIn ? currentUser.name : 'Visitante',
-                text: text,
-                time: formattedTime
+                sender: currentUser.isLoggedIn ? currentUser.name : 'Visitante Anônimo',
+                text,
+                time: timeStr
             });
 
-            input.value = '';
-            renderChatMessages();
+            inputEl.value = '';
+            renderActiveChatBox();
             renderChatThreads();
         }
 
-        function renderAdminDashboard() {
-            const total = petsData.length;
-            const lost = petsData.filter(p => p.category === 'PERDI').length;
-            const found = petsData.filter(p => p.category === 'ACHEI').length;
-            const resolved = petsData.filter(p => p.status === 'Reencontrado').length;
+        function renderProfileView() {
+            if (!currentUser.isLoggedIn) return;
 
-            const elTotal = document.getElementById('metric-total');
-            if (elTotal) elTotal.textContent = total;
-            const elLost = document.getElementById('metric-lost');
-            if (elLost) elLost.textContent = lost;
-            const elFound = document.getElementById('metric-found');
-            if (elFound) elFound.textContent = found;
-            const elResolved = document.getElementById('metric-resolved');
-            if (elResolved) elResolved.textContent = resolved;
+            document.getElementById('profile-name').value = currentUser.name;
+            document.getElementById('profile-email').value = currentUser.email;
+            document.getElementById('profile-phone').value = currentUser.phone;
+            document.getElementById('profile-city').value = currentUser.city;
+            document.getElementById('profile-avatar').value = currentUser.avatar || '';
+            document.getElementById('profile-avatar-preview').src = currentUser.avatar || 'https://placehold.co/100x100/A3C9A8/333333?text=Avatar';
 
-            renderAdminCharts(lost, found, resolved);
-            renderAdminTable();
+            const myPetsContainer = document.getElementById('my-pets-list');
+            if (!myPetsContainer) return;
+            myPetsContainer.innerHTML = '';
+
+            const myPets = petsData.filter(p => p.reporterEmail === currentUser.email || currentUser.role === 'ADMIN');
+
+            if (myPets.length === 0) {
+                myPetsContainer.innerHTML = '<p class="text-xs text-slate-600 p-4 bg-[#f0f5f7] rounded-xl">Você ainda não registrou nenhum animal na plataforma.</p>';
+                return;
+            }
+
+            myPets.forEach(pet => {
+                myPetsContainer.innerHTML += `
+                    <div class="bg-white border border-[#A3C9A8] rounded-2xl p-4 flex items-center justify-between gap-4 shadow-sm">
+                        <div class="flex items-center gap-3">
+                            <img src="${pet.photo}" alt="${pet.name}" class="w-14 h-14 rounded-xl object-cover border border-[#84B59F]" onerror="this.src='https://placehold.co/100x100/A3C9A8/333333?text=Pet'">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <h4 class="font-bold text-sm text-slate-800">${pet.name}</h4>
+                                    <span class="text-[10px] bg-[#f0f5f7] text-[#50808E] px-2 py-0.5 rounded-md border border-[#84B59F]">${pet.id}</span>
+                                </div>
+                                <p class="text-xs text-slate-600 mt-0.5">${pet.species} • ${pet.breed || 'SRD'} • Status: <strong class="text-slate-800">${pet.status}</strong></p>
+                                <p class="text-[11px] text-slate-500 mt-1"><i class="fa-solid fa-location-dot mr-1"></i> ${pet.address}</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button onclick="openEditPetModal('${pet.id}')" class="bg-[#50808E] hover:bg-[#3f6672] text-white text-xs px-3 py-2 rounded-xl transition flex items-center gap-1.5 font-medium shadow-sm">
+                                <i class="fa-solid fa-pen"></i> Editar
+                            </button>
+                            <button onclick="deletePetFromProfile('${pet.id}')" class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 text-xs px-3 py-2 rounded-xl transition">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
         }
 
-        function renderAdminCharts(lost, found, resolved) {
-            const speciesMap = {
-                'Cão': 0,
-                'Gato': 0,
-                'Ave': 0,
-                'Animais de Criação': 0,
-                'Outros': 0
+        function updateProfile(e) {
+            e.preventDefault();
+            const name = document.getElementById('profile-name').value.trim();
+            const phone = document.getElementById('profile-phone').value.trim();
+            const city = document.getElementById('profile-city').value.trim();
+            const avatar = document.getElementById('profile-avatar').value.trim();
+
+            currentUser.name = name;
+            currentUser.phone = phone;
+            currentUser.city = city;
+            if (avatar) currentUser.avatar = avatar;
+
+            const acc = registeredAccounts.find(a => a.email === currentUser.email);
+            if (acc) {
+                acc.name = name;
+                acc.phone = phone;
+                acc.city = city;
+                if (avatar) acc.avatar = avatar;
+            }
+
+            updateUserUI();
+            renderProfileView();
+            showGlobalAlert('Perfil atualizado com sucesso!', 'success');
+        }
+
+        let activeEditingPetId = null;
+        function openEditPetModal(id) {
+            const pet = petsData.find(p => p.id === id);
+            if (!pet) return;
+
+            activeEditingPetId = pet.id;
+            document.getElementById('edit-pet-name').value = pet.name;
+            document.getElementById('edit-pet-breed').value = pet.breed || '';
+            document.getElementById('edit-pet-color').value = pet.color || '';
+            document.getElementById('edit-pet-status').value = pet.status;
+            document.getElementById('edit-pet-reward').value = pet.reward || '';
+            document.getElementById('edit-pet-description').value = pet.description || '';
+
+            document.getElementById('modal-edit-pet').classList.remove('hidden');
+        }
+
+        function closeEditPetModal() {
+            document.getElementById('modal-edit-pet').classList.add('hidden');
+            activeEditingPetId = null;
+        }
+
+        function handleEditPetSubmit(e) {
+            e.preventDefault();
+            const pet = petsData.find(p => p.id === activeEditingPetId);
+            if (!pet) return;
+
+            pet.name = document.getElementById('edit-pet-name').value;
+            pet.breed = document.getElementById('edit-pet-breed').value;
+            pet.color = document.getElementById('edit-pet-color').value;
+            pet.status = document.getElementById('edit-pet-status').value;
+            pet.reward = document.getElementById('edit-pet-reward').value;
+            pet.description = document.getElementById('edit-pet-description').value;
+
+            closeEditPetModal();
+            renderProfileView();
+            applyFilters();
+            showGlobalAlert('Registro atualizado com sucesso!', 'success');
+        }
+
+        function deletePetFromProfile(id) {
+            petsData = petsData.filter(p => p.id !== id);
+            renderProfileView();
+            applyFilters();
+            showGlobalAlert('Registro excluído com sucesso.', 'success');
+        }
+
+        function renderAdminDashboard() {
+            document.getElementById('admin-total-cases').textContent = petsData.length;
+            document.getElementById('admin-total-found').textContent = petsData.filter(p => p.status === 'Reencontrado').length;
+            document.getElementById('admin-total-active').textContent = petsData.filter(p => p.status !== 'Reencontrado').length;
+
+            const ctx = document.getElementById('adminSpeciesChart').getContext('2d');
+            const speciesCounts = {
+                'Cão': petsData.filter(p => p.species === 'Cão').length,
+                'Gato': petsData.filter(p => p.species === 'Gato').length,
+                'Ave': petsData.filter(p => p.species === 'Ave').length,
+                'Outros': petsData.filter(p => !['Cão', 'Gato', 'Ave'].includes(p.species)).length
             };
 
-            petsData.forEach(p => {
-                if (speciesMap[p.species] !== undefined) {
-                    speciesMap[p.species]++;
-                } else {
-                    speciesMap['Outros'] = (speciesMap['Outros'] || 0) + 1;
+            if (window.speciesChartInstance) {
+                window.speciesChartInstance.destroy();
+            }
+
+            window.speciesChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(speciesCounts),
+                    datasets: [{
+                        data: Object.values(speciesCounts),
+                        backgroundColor: ['#50808E', '#69A297', '#A3C9A8', '#DDD8C4']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
                 }
             });
-
-            if (speciesChart) speciesChart.destroy();
-            if (speciesHorizontalChart) speciesHorizontalChart.destroy();
-
-            const paletteColors = ['#6BD425', '#618B25', '#42113C', '#370926', '#8A89C0'];
-
-            const ctxSpeciesEl = document.getElementById('chart-species');
-            if (ctxSpeciesEl) {
-                speciesChart = new Chart(ctxSpeciesEl.getContext('2d'), {
-                    type: 'doughnut',
-                    data: {
-                        labels: Object.keys(speciesMap),
-                        datasets: [{
-                            data: Object.values(speciesMap),
-                            backgroundColor: paletteColors
-                        }]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-            }
-
-            const ctxHorizontalEl = document.getElementById('chart-species-horizontal');
-            if (ctxHorizontalEl) {
-                speciesHorizontalChart = new Chart(ctxHorizontalEl.getContext('2d'), {
-                    type: 'bar',
-                    data: {
-                        labels: ['Cães', 'Gatos', 'Aves', 'Animais de Criação'],
-                        datasets: [{
-                            label: 'Número de Postagens',
-                            data: [
-                                speciesMap['Cão'],
-                                speciesMap['Gato'],
-                                speciesMap['Ave'],
-                                speciesMap['Animais de Criação']
-                            ],
-                            backgroundColor: ['#6BD425', '#618B25', '#42113C', '#370926'],
-                            borderRadius: 6
-                        }]
-                    },
-                    options: {
-                        indexAxis: 'y',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                            x: {
-                                beginAtZero: true,
-                                ticks: { precision: 0 }
-                            }
-                        }
-                    }
-                });
-            }
         }
-
-        function renderAdminTable() {
-            const tbody = document.getElementById('admin-table-body');
-            if (!tbody) return;
-            tbody.innerHTML = '';
-
-            petsData.forEach(pet => {
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-[#370926]/30 transition';
-
-                tr.innerHTML = `
-                    <td class="p-4 font-mono text-xs font-bold text-slate-200">${pet.id}</td>
-                    <td class="p-4">
-                        <span class="px-2.5 py-1 text-[10px] font-bold rounded-full ${pet.category === 'PERDI' ? 'bg-[#42113C] text-[#6BD425] border border-[#6BD425]/30' : 'bg-[#618B25] text-white'}">
-                            ${pet.category}
-                        </span>
-                    </td>
-                    <td class="p-4 font-semibold text-slate-100">${pet.name} <span class="text-xs text-slate-400 font-normal">(${pet.species})</span></td>
-                    <td class="p-4 text-xs">${pet.date}<br><span class="text-slate-400">${pet.address}</span></td>
-                    <td class="p-4 text-xs">${pet.reporterName}<br><span class="text-slate-400">${pet.contact}</span></td>
-                    <td class="p-4">
-                        <select onchange="changePetStatus('${pet.id}', this.value)" class="text-xs border border-[#42113C] rounded-lg px-2 py-1 bg-[#1C0118] text-slate-200 outline-none focus:ring-1 focus:ring-[#6BD425]">
-                            <option value="Em Busca" ${pet.status === 'Em Busca' ? 'selected' : ''}>Em Busca</option>
-                            <option value="Aguardando Tutor" ${pet.status === 'Aguardando Tutor' ? 'selected' : ''}>Aguardando Tutor</option>
-                            <option value="Reencontrado" ${pet.status === 'Reencontrado' ? 'selected' : ''}>Reencontrado</option>
-                        </select>
-                    </td>
-                    <td class="p-4 text-right">
-                        <button onclick="deletePet('${pet.id}')" class="text-rose-400 hover:text-rose-300 p-1.5 rounded-lg hover:bg-rose-950/50" title="Excluir Ocorrência">
-                            <i class="fa-solid fa-trash-can"></i>
-                        </button>
-                    </td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function changePetStatus(id, newStatus) {
-            const pet = petsData.find(p => p.id === id);
-            if (pet) {
-                pet.status = newStatus;
-                renderAdminDashboard();
-                applyFilters();
-                showGlobalAlert(`Status da ocorrência ${id} atualizado para "${newStatus}".`, 'success');
-            }
-        }
-
-        function deletePet(id) {
-            petsData = petsData.filter(p => p.id !== id);
-            renderAdminDashboard();
-            applyFilters();
-            showGlobalAlert(`Ocorrência ${id} removida com sucesso.`, 'info');
-        }
-
-        function exportDataCSV() {
-            let csvContent = "data:text/csv;charset=utf-8,Protocolo,Categoria,Nome,Especie,Raca,Data,Endereco,Contato,Status\n";
-            petsData.forEach(p => {
-                csvContent += `${p.id},${p.category},"${p.name}",${p.species},"${p.breed}",${p.date},"${p.address}","${p.contact}",${p.status}\n`;
-            });
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `petalert_export_${new Date().toISOString().slice(0,10)}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function showGlobalAlert(msg, type = 'info') {
-            const banner = document.getElementById('global-alert');
-            const icon = document.getElementById('global-alert-icon');
-            const msgEl = document.getElementById('global-alert-msg');
-            if (!banner || !icon || !msgEl) return;
-
-            msgEl.textContent = msg;
-            banner.className = 'mb-4 p-4 rounded-xl border shadow-sm transition-all duration-300 flex items-center justify-between ';
-
-            if (type === 'success') {
-                banner.className += 'bg-[#370926] border-[#6BD425]/50 text-[#6BD425]';
-                icon.className = 'fa-solid fa-circle-check text-[#6BD425] text-xl';
-            } else if (type === 'error') {
-                banner.className += 'bg-[#370926] border-rose-500/50 text-rose-300';
-                icon.className = 'fa-solid fa-triangle-exclamation text-rose-400 text-xl';
-            } else {
-                banner.className += 'bg-[#370926] border-[#618B25]/50 text-emerald-200';
-                icon.className = 'fa-solid fa-circle-info text-[#6BD425] text-xl';
-            }
-
-            banner.classList.remove('hidden');
-            setTimeout(() => closeGlobalAlert(), 6000);
-        }
-
-        function closeGlobalAlert() {
-            const banner = document.getElementById('global-alert');
-            if (banner) banner.classList.add('hidden');
-        }
-
-        window.onload = function () {
-            updateUserUI();
-            applyFilters();
-        };
     </script>
 </head>
-<body class="h-full flex flex-col text-slate-100 antialiased selection:bg-[#6BD425] selection:text-slate-950 bg-slate-950">
+<body class="h-full flex flex-col text-slate-800 bg-[#DDD8C4]">
 
-    <div id="auth-screen" class="fixed inset-0 z-50 bg-[#1C0118] flex items-center justify-center p-4 bg-gradient-to-br from-[#1C0118] via-[#370926] to-[#42113C]">
-        <div class="bg-[#370926] rounded-3xl shadow-2xl border border-[#42113C] w-full max-w-md overflow-hidden transform transition-all text-slate-100">
-            <div class="p-6 bg-gradient-to-r from-[#42113C] to-[#618B25] text-white text-center relative">
-                <div class="w-24 h-24 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center mx-auto mb-3 p-2 shadow-lg border border-white/25">
-                    <img src="https://storage.googleapis.com/msgsndr/wWJb27xK6s22zL7j95x5/media/67d643d9f3f4e2456e43f0ae.png" alt="PetLink Logo" class="w-full h-full object-contain rounded-xl" onerror="this.src='https://placehold.co/100x100/ffffff/618B25?text=PetLink'">
+    <div id="global-alert" class="hidden fixed bottom-5 right-5 z-50 px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 text-sm font-medium transition transform translate-y-0 opacity-100 bg-[#50808E] text-white">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="global-alert-text">Mensagem do sistema</span>
+    </div>
+
+    <div id="auth-screen" class="fixed inset-0 z-50 bg-[#DDD8C4]/95 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 border border-[#A3C9A8]">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-[#50808E] text-white rounded-2xl mx-auto flex items-center justify-center text-2xl shadow-lg mb-3">
+                    <i class="fa-solid fa-paw"></i>
                 </div>
-                <h2 class="text-2xl font-bold">PetLink: CadêMeuPet?</h2>
-                <p class="text-xs text-emerald-200 mt-1">Identifique-se para acessar o sistema de localização</p>
+                <h1 class="text-2xl font-extrabold text-slate-900">AuChou: CadêMeuPet?</h1>
+                <p class="text-xs text-slate-600 mt-1">Plataforma de geolocalização e resgate de animais perdidos</p>
             </div>
 
-            <div class="p-6 space-y-5">
-                <div class="bg-[#1C0118] border border-[#42113C] rounded-xl p-3 text-xs text-slate-200 space-y-2">
-                    <p class="font-bold text-[#6BD425] flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-bolt"></i> Acesso Rápido para Testes:
-                    </p>
-                    <div class="grid grid-cols-2 gap-2 pt-1">
-                        <button type="button" onclick="quickLogin('ADMIN')" class="bg-[#42113C] hover:bg-[#370926] text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm border border-[#618B25]/30">
-                            <i class="fa-solid fa-user-gear"></i> Perfil ADMIN
-                        </button>
-                        <button type="button" onclick="quickLogin('TUTOR')" class="bg-[#618B25] hover:bg-[#4e701d] text-white font-semibold py-2 px-3 rounded-lg text-xs transition flex items-center justify-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-user"></i> Perfil TUTOR
-                        </button>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail</label>
+                    <input type="email" id="login-email" required placeholder="ex: admin@auchou.com" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#50808E]">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Senha</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#50808E]">
+                </div>
+                <div id="login-error" class="hidden text-xs text-red-600 font-medium"></div>
+
+                <button type="submit" class="w-full bg-[#50808E] hover:bg-[#3f6672] text-white py-3 rounded-xl font-bold text-sm shadow-md transition">
+                    Entrar no Sistema
+                </button>
+            </form>
+
+            <div class="mt-6 pt-6 border-t border-[#DDD8C4] text-center space-y-3">
+                <p class="text-xs text-slate-600">Ainda não tem uma conta?</p>
+                <button onclick="openRegisterAccountModal()" class="w-full bg-[#A3C9A8] hover:bg-[#84B59F] text-slate-900 font-bold py-2.5 rounded-xl text-xs transition shadow-sm">
+                    Cadastrar Nova Conta
+                </button>
+                <button onclick="currentUser.isLoggedIn=true; currentUser.name='Visitante'; currentUser.role='GUEST'; updateUserUI(); document.getElementById('auth-screen').classList.add('hidden'); applyFilters();" class="text-xs text-[#50808E] hover:underline font-semibold block w-full pt-1">
+                    Continuar como Visitante (Convidado)
+                </button>
+            </div>
+            <div class="mt-4 p-3 bg-[#f0f5f7] rounded-xl text-[11px] text-slate-600 text-center border border-[#84B59F]/50">
+                💡 <strong>Acesso Admin de Teste:</strong> admin@auchou.com / Admin123!
+            </div>
+        </div>
+    </div>
+
+    <header class="glass-header border-b border-[#A3C9A8] sticky top-0 z-40 px-4 lg:px-8 py-3 flex items-center justify-between shadow-sm">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 bg-[#50808E] text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-sm">
+                <i class="fa-solid fa-paw"></i>
+            </div>
+            <div>
+                <h2 class="font-extrabold text-slate-900 text-base leading-tight">AuChou: CadêMeuPet?</h2>
+                <p class="text-[11px] text-slate-600">Radar e Alerta de Animais Perdidos</p>
+            </div>
+        </div>
+
+        <!-- Desktop Navigation Tabs -->
+        <nav class="hidden md:flex items-center gap-2">
+            <button onclick="switchTab('list-view')" data-tab="list-view" class="nav-btn active bg-[#50808E] text-white px-4 py-2 rounded-xl text-xs font-bold transition shadow-sm">
+                <i class="fa-solid fa-list mr-1.5"></i> Mural de Ocorrências
+            </button>
+            <button onclick="switchTab('map-view')" data-tab="map-view" class="nav-btn text-slate-700 hover:bg-[#A3C9A8]/30 px-4 py-2 rounded-xl text-xs font-semibold transition">
+                <i class="fa-solid fa-radar mr-1.5"></i> Radar / Mapa
+            </button>
+            <button onclick="switchTab('register-view')" data-tab="register-view" class="nav-btn text-slate-700 hover:bg-[#A3C9A8]/30 px-4 py-2 rounded-xl text-xs font-semibold transition">
+                <i class="fa-solid fa-circle-plus mr-1.5"></i> Cadastrar Ocorrência
+            </button>
+            <button onclick="switchTab('messages-view')" data-tab="messages-view" class="nav-btn text-slate-700 hover:bg-[#A3C9A8]/30 px-4 py-2 rounded-xl text-xs font-semibold transition">
+                <i class="fa-solid fa-comments mr-1.5"></i> Mensagens
+            </button>
+            <button onclick="switchTab('profile-view')" data-tab="profile-view" class="nav-btn text-slate-700 hover:bg-[#A3C9A8]/30 px-4 py-2 rounded-xl text-xs font-semibold transition">
+                <i class="fa-solid fa-user mr-1.5"></i> Meu Perfil
+            </button>
+            <button id="nav-admin-btn" onclick="switchTab('admin-view')" data-tab="admin-view" class="nav-btn hidden text-slate-700 hover:bg-[#A3C9A8]/30 px-4 py-2 rounded-xl text-xs font-semibold transition">
+                <i class="fa-solid fa-shield-halved mr-1.5"></i> Admin
+            </button>
+        </nav>
+
+        <!-- User Profile Quick Info & Logout -->
+        <div class="hidden lg:flex items-center gap-3">
+            <img id="user-display-avatar" src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80" class="w-9 h-9 rounded-full object-cover border border-[#50808E]" onerror="this.src='https://placehold.co/100x100/A3C9A8/333333?text=User'">
+            <div class="text-left">
+                <h4 id="user-display-name" class="font-bold text-xs text-slate-900">Visitante</h4>
+                <span id="user-display-role" class="text-[10px] text-slate-600 bg-[#A3C9A8]/40 px-2 py-0.5 rounded font-medium">Convidado</span>
+            </div>
+            <button onclick="handleLogout()" class="text-slate-600 hover:text-red-600 p-2 rounded-xl transition" title="Sair da Conta">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button onclick="toggleMobileMenu()" class="md:hidden text-slate-800 p-2 rounded-xl bg-[#A3C9A8]/40">
+            <i class="fa-solid fa-bars text-lg"></i>
+        </button>
+    </header>
+
+    <!-- Mobile Navigation Drawer -->
+    <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-[#A3C9A8] p-4 space-y-2 z-30 shadow-lg">
+        <button onclick="switchTab('list-view'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold bg-[#50808E] text-white">
+            <i class="fa-solid fa-list mr-2"></i> Mural de Ocorrências
+        </button>
+        <button onclick="switchTab('map-view'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-[#f0f5f7]">
+            <i class="fa-solid fa-radar mr-2"></i> Radar / Mapa
+        </button>
+        <button onclick="switchTab('register-view'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-[#f0f5f7]">
+            <i class="fa-solid fa-circle-plus mr-2"></i> Cadastrar Ocorrência
+        </button>
+        <button onclick="switchTab('messages-view'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-[#f0f5f7]">
+            <i class="fa-solid fa-comments mr-2"></i> Mensagens
+        </button>
+        <button onclick="switchTab('profile-view'); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold text-slate-700 hover:bg-[#f0f5f7]">
+            <i class="fa-solid fa-user mr-2"></i> Meu Perfil
+        </button>
+        <button onclick="handleLogout(); toggleMobileMenu();" class="w-full text-left px-4 py-2.5 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-50">
+            <i class="fa-solid fa-right-from-bracket mr-2"></i> Sair / Trocar Conta
+        </button>
+    </div>
+
+    <main class="flex-1 overflow-y-auto p-4 lg:p-8">
+
+        <!-- TAB 1: MURAL DE OCORRÊNCIAS -->
+        <div id="tab-list-view" class="tab-content max-w-7xl mx-auto space-y-6">
+            <!-- Filter Bar -->
+            <div class="bg-white p-4 lg:p-6 rounded-3xl shadow-sm border border-[#A3C9A8] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Categoria</label>
+                    <select id="filter-category" onchange="applyFilters()" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#50808E]">
+                        <option value="ALL">Todas as Categorias</option>
+                        <option value="PERDI">🔴 Perdi um Pet</option>
+                        <option value="ACHEI">🔵 Achei um Pet</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Espécie</label>
+                    <select id="filter-species" onchange="applyFilters()" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#50808E]">
+                        <option value="ALL">Todas as Espécies</option>
+                        <option value="Cão">Cão</option>
+                        <option value="Gato">Gato</option>
+                        <option value="Ave">Ave</option>
+                        <option value="Outros">Outros</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                    <select id="filter-status" onchange="applyFilters()" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs font-medium focus:outline-none focus:ring-2 focus:ring-[#50808E]">
+                        <option value="ALL">Todos os Status</option>
+                        <option value="Em Busca">Em Busca / Perdido</option>
+                        <option value="Aguardando Tutor">Aguardando Tutor</option>
+                        <option value="Reencontrado">Reencontrado 🎉</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Buscar por Nome, Raça ou Bairro</label>
+                    <div class="relative">
+                        <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Ex: Thor, Golden, Centro..." class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-[#50808E]">
+                        <i class="fa-solid fa-search absolute left-3.5 top-3 text-slate-400 text-xs"></i>
                     </div>
                 </div>
+            </div>
 
-                <div class="relative flex py-1 items-center">
-                    <div class="flex-grow border-t border-[#42113C]"></div>
-                    <span class="flex-shrink mx-3 text-xs text-slate-400 font-semibold uppercase">ou entre com e-mail</span>
-                    <div class="flex-grow border-t border-[#42113C]"></div>
+            <!-- Cases Grid -->
+            <div id="cases-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Dynamic Cards inserted here -->
+            </div>
+
+            <!-- Empty State -->
+            <div id="empty-state" class="hidden text-center py-16 bg-white rounded-3xl border border-[#A3C9A8]">
+                <i class="fa-solid fa-face-sad-tear text-4xl text-[#50808E] mb-3"></i>
+                <h3 class="font-bold text-slate-800 text-base">Nenhum pet encontrado</h3>
+                <p class="text-xs text-slate-600 mt-1">Tente ajustar os filtros de busca para encontrar outras ocorrências.</p>
+            </div>
+        </div>
+
+        <!-- TAB 2: RADAR / MAPA GLOBAL -->
+        <div id="tab-map-view" class="tab-content hidden max-w-7xl mx-auto h-[calc(100vh-140px)] flex flex-col space-y-4">
+            <div class="bg-white p-4 rounded-2xl border border-[#A3C9A8] flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <h3 class="font-extrabold text-slate-900 text-base">Radar de Ocorrências em Tempo Real</h3>
+                    <p class="text-xs text-slate-600">Visualize pins de localização exatos onde os animais foram perdidos ou encontrados.</p>
+                </div>
+                <button onclick="initMaps(); updateRadarPins(); showGlobalAlert('Radar atualizado!', 'success');" class="bg-[#50808E] hover:bg-[#3f6672] text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-sm">
+                    <i class="fa-solid fa-rotate mr-1.5"></i> Atualizar Posições
+                </button>
+            </div>
+            <div class="flex-1 bg-white p-3 rounded-3xl border border-[#A3C9A8] shadow-sm">
+                <div id="map" class="map-container"></div>
+            </div>
+        </div>
+
+        <!-- TAB 3: CADASTRAR OCORRÊNCIA COM MAPA E PIN DINÂMICO -->
+        <div id="tab-register-view" class="tab-content hidden max-w-3xl mx-auto">
+            <div class="bg-white rounded-3xl shadow-sm border border-[#A3C9A8] p-6 lg:p-8">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-[#50808E] text-white rounded-2xl mx-auto flex items-center justify-center text-lg shadow-md mb-2">
+                        <i class="fa-solid fa-circle-plus"></i>
+                    </div>
+                    <h2 class="text-xl font-extrabold text-slate-900">Cadastrar Nova Ocorrência</h2>
+                    <p class="text-xs text-slate-600">Informe os dados e posicione o pino no mapa para ajudar a localizar o pet.</p>
                 </div>
 
-                <form id="mandatory-login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">E-mail</label>
-                        <input type="email" id="login-email" required placeholder="ex: tutor@petalert.com" class="w-full px-4 py-2 text-sm bg-[#1C0118] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
+                <form id="form-register-pet" onsubmit="handleRegisterPet(event)" class="space-y-5">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Tipo de Ocorrência *</label>
+                            <select id="pet-category" required class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-[#50808E]">
+                                <option value="PERDI">🔴 Perdi um Pet</option>
+                                <option value="ACHEI">🔵 Achei um Pet</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nome do Pet (ou Apelido) *</label>
+                            <input type="text" id="pet-name" required placeholder="Ex: Thor ou Gato Encontrado" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Espécie *</label>
+                            <select id="pet-species" required class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs font-medium focus:ring-2 focus:ring-[#50808E]">
+                                <option value="Cão">Cão</option>
+                                <option value="Gato">Gato</option>
+                                <option value="Ave">Ave</option>
+                                <option value="Outros">Outros</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Raça</label>
+                            <input type="text" id="pet-breed" placeholder="Ex: SRD, Poodle, Siamês" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Cor Predominante *</label>
+                            <input type="text" id="pet-color" required placeholder="Ex: Dourado, Preto e Branco" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Data do Ocorrido *</label>
+                            <input type="date" id="pet-date" required class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Recompensa (Opcional)</label>
+                            <input type="text" id="pet-reward" placeholder="Ex: R$ 200,00 ou Não há" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
+                    </div>
+
+                    <!-- Interactive Address & Map Picker Section -->
+                    <div class="space-y-2 bg-[#f0f5f7] p-4 rounded-2xl border border-[#A3C9A8]">
+                        <label class="block text-xs font-bold text-slate-800"><i class="fa-solid fa-location-dot text-[#50808E]"></i> Endereço do Ocorrido & Pin no Mapa *</label>
+                        <p class="text-[11px] text-slate-600">Digite o endereço e clique em "Buscar no Mapa", ou **arraste o pin no mapa** abaixo para marcar a localização exata.</p>
+                        <div class="flex gap-2">
+                            <input type="text" id="pet-address" required placeholder="Ex: Rua das Flores, Centro, Itapetininga" class="flex-1 bg-white border border-[#A3C9A8] rounded-xl px-4 py-2.5 text-xs focus:ring-2 focus:ring-[#50808E]">
+                            <button type="button" onclick="searchAddressOnMap()" class="bg-[#50808E] hover:bg-[#3f6672] text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow-sm">
+                                Buscar no Mapa
+                            </button>
+                        </div>
+                        <!-- Hidden Lat/Lng Inputs -->
+                        <div class="flex gap-4 text-[11px] text-slate-500 font-mono">
+                            <span>Lat: <input type="text" id="pet-lat" value="-23.5905" readonly class="bg-transparent w-20"></span>
+                            <span>Lng: <input type="text" id="pet-lng" value="-48.0512" readonly class="bg-transparent w-20"></span>
+                        </div>
+                        <div class="form-map-container mt-2">
+                            <div id="form-map" style="width: 100%; height: 100%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">URL da Foto do Pet</label>
+                            <input type="url" id="pet-photo" placeholder="https://exemplo.com/foto.jpg" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Telefone de Contato / WhatsApp *</label>
+                            <input type="text" id="pet-contact" required placeholder="(15) 99999-9999" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]">
+                        </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Senha</label>
-                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-2 text-sm bg-[#1C0118] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Descrição Detalhada / Características</label>
+                        <textarea id="pet-description" rows="3" placeholder="Coleira azul, muito assustado, responde pelo nome..." class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-3 text-xs focus:ring-2 focus:ring-[#50808E]"></textarea>
                     </div>
 
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Perfil de Acesso</label>
-                        <select id="login-role" class="w-full px-4 py-2 text-sm bg-[#1C0118] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                            <option value="TUTOR">TUTOR (Usuário Geral)</option>
-                            <option value="ADMIN">ADMINISTRADOR (Acesso Completo)</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="w-full bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 font-bold py-2.5 rounded-xl text-sm shadow-md transition flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-right-to-bracket"></i> Entrar na Aplicação
+                    <button type="submit" class="w-full bg-[#50808E] hover:bg-[#3f6672] text-white py-3.5 rounded-xl font-bold text-sm shadow-md transition">
+                        Publicar Ocorrência e Ativar Radar
                     </button>
                 </form>
             </div>
         </div>
-    </div>
 
-    <div id="app-container" class="hidden h-full flex flex-col">
+        <!-- TAB 4: MENSAGENS / CHAT -->
+        <div id="tab-messages-view" class="tab-content hidden max-w-7xl mx-auto h-[calc(100vh-140px)] flex flex-col lg:flex-row gap-6">
+            <div class="w-full lg:w-1/3 bg-white rounded-3xl border border-[#A3C9A8] p-4 flex flex-col shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-sm mb-3">Conversas e Pistas Recebidas</h3>
+                <div id="chat-threads-list" class="flex-1 overflow-y-auto space-y-2 custom-scrollbar">
+                    <!-- Threads populated via JS -->
+                </div>
+            </div>
+            <div id="active-chat-area" class="flex-1 bg-[#f0f5f7] rounded-3xl border border-[#A3C9A8] flex flex-col overflow-hidden shadow-sm">
+                <!-- Active Chat Box -->
+            </div>
+        </div>
 
-    <header class="sticky top-0 z-40 w-full glass-header border-b border-[#370926] shadow-sm bg-[#1C0118]/90 text-slate-100">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex items-center justify-between h-16">
-                <div class="flex items-center gap-3 cursor-pointer" onclick="switchTab('map-view')">
-                    <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-[#618B25] to-[#6BD425] flex items-center justify-center text-slate-950 shadow-md p-1 border border-white/20">
-                        <img src="https://storage.googleapis.com/msgsndr/wWJb27xK6s22zL7j95x5/media/67d643d9f3f4e2456e43f0ae.png" alt="PetLink Logo" class="w-full h-full object-contain rounded-lg" onerror="this.style.display='none'">
+        <!-- TAB 5: MEU PERFIL -->
+        <div id="tab-profile-view" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+            <div class="bg-white rounded-3xl p-6 lg:p-8 border border-[#A3C9A8] shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-lg mb-4"><i class="fa-solid fa-user-gear mr-2 text-[#50808E]"></i> Meu Perfil de Tutor</h3>
+                
+                <form onsubmit="updateProfile(event)" class="space-y-4">
+                    <div class="flex items-center gap-4 mb-4">
+                        <img id="profile-avatar-preview" src="https://placehold.co/100x100/A3C9A8/333333?text=Avatar" class="w-16 h-16 rounded-full object-cover border-2 border-[#50808E]">
+                        <div class="flex-1">
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">URL do Avatar</label>
+                            <input type="url" id="profile-avatar" placeholder="https://..." class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2 text-xs">
+                        </div>
                     </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo</label>
+                            <input type="text" id="profile-name" required class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-2.5 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail (Login)</label>
+                            <input type="email" id="profile-email" disabled class="w-full bg-slate-100 border border-[#A3C9A8] rounded-xl px-4 py-2.5 text-xs text-slate-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Telefone / WhatsApp</label>
+                            <input type="text" id="profile-phone" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-2.5 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">Cidade / Região</label>
+                            <input type="text" id="profile-city" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-4 py-2.5 text-xs">
+                        </div>
+                    </div>
+                    <button type="submit" class="bg-[#50808E] hover:bg-[#3f6672] text-white text-xs px-6 py-2.5 rounded-xl font-bold shadow-sm transition">
+                        Salvar Alterações
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-3xl p-6 lg:p-8 border border-[#A3C9A8] shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-base mb-4"><i class="fa-solid fa-shield-dog mr-2 text-[#50808E]"></i> Meus Pets Cadastrados</h3>
+                <div id="my-pets-list" class="space-y-3">
+                    <!-- My pets inserted via JS -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 6: ADMIN DASHBOARD -->
+        <div id="tab-admin-view" class="tab-content hidden max-w-7xl mx-auto space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div class="bg-white p-6 rounded-3xl border border-[#A3C9A8] shadow-sm flex items-center justify-between">
                     <div>
-                        <span class="text-lg font-bold bg-gradient-to-r from-[#6BD425] to-[#618B25] bg-clip-text text-transparent">PetLink: CadêMeuPet?</span>
-                        <span class="hidden sm:inline-block text-xs font-semibold px-2 py-0.5 ml-2 bg-[#42113C] text-[#6BD425] rounded-full border border-[#6BD425]/30">Plataforma Interativa</span>
+                        <p class="text-xs text-slate-500 font-semibold">Total de Ocorrências</p>
+                        <h3 id="admin-total-cases" class="text-3xl font-extrabold text-slate-900 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-[#50808E]/20 text-[#50808E] rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-folder-open"></i>
                     </div>
                 </div>
-
-                <nav id="main-nav" class="hidden md:flex items-center space-x-1">
-                    <button onclick="switchTab('map-view')" class="nav-btn active bg-[#370926] text-[#6BD425] px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" data-tab="map-view">
-                        <i class="fa-solid fa-map-location-dot text-[#6BD425]"></i> Mapa de Ocorrências
-                    </button>
-                    <button onclick="switchTab('list-view')" class="nav-btn text-slate-300 hover:text-[#6BD425] hover:bg-[#42113C] px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2" data-tab="list-view">
-                        <i class="fa-solid fa-list-ul text-[#6BD425]"></i> Listagem de Casos
-                    </button>
-                    <button id="nav-btn-register" onclick="openRegisterModal()" class="nav-btn text-slate-300 hover:text-[#6BD425] hover:bg-[#42113C] px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2">
-                        <i class="fa-solid fa-circle-plus text-[#6BD425]"></i> Registrar Ocorrência
-                    </button>
-                    <button onclick="switchTab('messages-view')" class="nav-btn text-slate-300 hover:text-[#6BD425] hover:bg-[#42113C] px-3 py-2 rounded-lg text-sm font-medium transition flex items-center gap-2 relative" data-tab="messages-view">
-                        <i class="fa-solid fa-comments text-[#618B25]"></i> Mensagens
-                    </button>
-                    <button id="nav-btn-admin" onclick="switchTab('admin-view')" class="hidden nav-btn text-[#6BD425] hover:text-[#58b21e] hover:bg-[#42113C] px-3 py-2 rounded-lg text-sm font-semibold transition flex items-center gap-2" data-tab="admin-view">
-                        <i class="fa-solid fa-user-shield"></i> Painel Admin
-                    </button>
-                </nav>
-
-                <div class="flex items-center gap-3">
-                    <div id="user-profile-badge" class="hidden flex items-center gap-3 bg-[#370926] px-3 py-1.5 rounded-full border border-[#42113C]">
-                        <div class="w-7 h-7 rounded-full bg-[#6BD425] text-slate-950 flex items-center justify-center font-bold text-xs" id="user-avatar-initials">T</div>
-                        <div class="text-left hidden lg:block">
-                            <p id="user-name-display" class="text-xs font-semibold text-slate-200 leading-none">Usuário</p>
-                            <p id="user-role-badge" class="text-[10px] font-bold text-[#6BD425] uppercase leading-tight">TUTOR</p>
-                        </div>
-                        <button onclick="logout()" class="text-slate-400 hover:text-rose-400 text-sm ml-1" title="Sair do Sistema">
-                            <i class="fa-solid fa-right-from-bracket"></i>
-                        </button>
+                <div class="bg-white p-6 rounded-3xl border border-[#A3C9A8] shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Pets Reencontrados 🎉</p>
+                        <h3 id="admin-total-found" class="text-3xl font-extrabold text-[#50808E] mt-1">0</h3>
                     </div>
+                    <div class="w-12 h-12 bg-[#69A297]/20 text-[#69A297] rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-heart-circle-check"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-3xl border border-[#A3C9A8] shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold">Buscas Ativas</p>
+                        <h3 id="admin-total-active" class="text-3xl font-extrabold text-amber-600 mt-1">0</h3>
+                    </div>
+                    <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-radar"></i>
+                    </div>
+                </div>
+            </div>
 
-                    <button id="btn-open-login" onclick="openLoginModal()" class="bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 text-sm font-medium px-4 py-2 rounded-lg shadow-sm transition flex items-center gap-2">
-                        <i class="fa-solid fa-right-to-bracket"></i> Entrar / Cadastrar
-                    </button>
-
-                    <button onclick="toggleMobileMenu()" class="md:hidden p-2 rounded-lg text-slate-300 hover:bg-[#370926]">
-                        <i class="fa-solid fa-bars text-xl"></i>
-                    </button>
+            <div class="bg-white p-6 rounded-3xl border border-[#A3C9A8] shadow-sm">
+                <h3 class="font-extrabold text-slate-900 text-base mb-4">Estatísticas por Espécie</h3>
+                <div class="h-64 relative">
+                    <canvas id="adminSpeciesChart"></canvas>
                 </div>
             </div>
         </div>
-
-        <div id="mobile-menu" class="hidden md:hidden border-t border-[#370926] bg-[#1C0118] px-4 pt-2 pb-4 space-y-1">
-            <button onclick="switchTab('map-view'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#370926]">
-                <i class="fa-solid fa-map-location-dot w-6 text-[#6BD425]"></i> Mapa de Ocorrências
-            </button>
-            <button onclick="switchTab('list-view'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#370926]">
-                <i class="fa-solid fa-list-ul w-6 text-[#6BD425]"></i> Listagem de Casos
-            </button>
-            <button onclick="openRegisterModal(); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#370926]">
-                <i class="fa-solid fa-circle-plus w-6 text-[#6BD425]"></i> Registrar Ocorrência
-            </button>
-            <button onclick="switchTab('messages-view'); toggleMobileMenu()" class="w-full text-left px-3 py-2 rounded-md text-base font-medium text-slate-300 hover:bg-[#370926]">
-                <i class="fa-solid fa-comments w-6 text-[#618B25]"></i> Mensagens
-            </button>
-            <button id="mobile-nav-admin" onclick="switchTab('admin-view'); toggleMobileMenu()" class="hidden w-full text-left px-3 py-2 rounded-md text-base font-medium text-[#6BD425] bg-[#370926]">
-                <i class="fa-solid fa-user-shield w-6"></i> Painel Administrador
-            </button>
-        </div>
-    </header>
-
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 relative bg-slate-950 text-slate-100">
-
-        <div id="global-alert" class="hidden mb-4 p-4 rounded-xl border shadow-sm transition-all duration-300 flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <i id="global-alert-icon" class="text-xl"></i>
-                <span id="global-alert-msg" class="text-sm font-medium"></span>
-            </div>
-            <button onclick="closeGlobalAlert()" class="text-slate-400 hover:text-slate-200 text-lg">&times;</button>
-        </div>
-
-        <!-- TAB 1: MAP VIEW -->
-        <section id="tab-map-view" class="tab-content space-y-4">
-            <div class="bg-[#1C0118] p-4 rounded-xl shadow-sm border border-[#370926] flex flex-col md:flex-row gap-4 items-center justify-between">
-                <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Filtros Rápidos:</span>
-                    <select id="filter-category" onchange="applyFilters()" class="text-sm border border-[#370926] rounded-lg px-3 py-1.5 bg-[#370926] text-slate-200 focus:bg-[#1C0118] focus:ring-2 focus:ring-[#6BD425] outline-none">
-                        <option value="ALL">Todas Categorias (Perdi & Achei)</option>
-                        <option value="PERDI">🔴 Perdi um Pet</option>
-                        <option value="ACHEI">🔵 Achei um Pet</option>
-                    </select>
-
-                    <select id="filter-species" onchange="applyFilters()" class="text-sm border border-[#370926] rounded-lg px-3 py-1.5 bg-[#370926] text-slate-200 focus:bg-[#1C0118] focus:ring-2 focus:ring-[#6BD425] outline-none">
-                        <option value="ALL">Todas as Espécies</option>
-                        <option value="Cão">🐶 Cão</option>
-                        <option value="Gato">🐱 Gato</option>
-                        <option value="Ave">🦜 Ave</option>
-                        <option value="Outros">🐾 Outros</option>
-                    </select>
-
-                    <select id="filter-status" onchange="applyFilters()" class="text-sm border border-[#370926] rounded-lg px-3 py-1.5 bg-[#370926] text-slate-200 focus:bg-[#1C0118] focus:ring-2 focus:ring-[#6BD425] outline-none">
-                        <option value="ALL">Todos os Status</option>
-                        <option value="Em Busca">🔍 Em Busca</option>
-                        <option value="Aguardando Tutor">🏠 Aguardando Tutor</option>
-                        <option value="Reencontrado">🎉 Reencontrado / Resolvido</option>
-                    </select>
-
-                    <button onclick="locateUserOnMap()" class="text-sm border border-[#618B25] text-[#6BD425] hover:bg-[#370926] font-medium px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-crosshairs"></i> Minha Localização
-                    </button>
-                </div>
-
-                <div class="w-full md:w-72 relative">
-                    <input type="text" id="filter-search" oninput="applyFilters()" placeholder="Buscar por bairro, nome ou raça..." class="w-full pl-9 pr-3 py-1.5 text-sm bg-[#370926] border border-[#42113C] text-white rounded-lg focus:ring-2 focus:ring-[#6BD425] outline-none placeholder-slate-400">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
-                </div>
-            </div>
-
-            <div class="relative bg-[#1C0118] p-2 rounded-2xl shadow-sm border border-[#370926] overflow-hidden">
-                <div class="map-embed-container">
-                    <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3675.2906123456!2d-48.0512!3d-23.5905!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94c5cc70ba456a65%3A0x770be09241987369!2sItapetininga%2C%20SP!5e0!3m2!1spt-BR!2sbr!4v1789348722913!5m2!1spt-BR!2sbr" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: LIST VIEW -->
-        <section id="tab-list-view" class="tab-content hidden space-y-6">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-100">Mural de Ocorrências Registradas</h2>
-                    <p class="text-sm text-slate-400">Ajude a conectar animais perdidos aos seus tutores</p>
-                </div>
-                <button onclick="openRegisterModal()" class="bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 font-medium px-4 py-2 rounded-xl text-sm shadow-md transition flex items-center gap-2">
-                    <i class="fa-solid fa-plus-circle"></i> Novo Registro
-                </button>
-            </div>
-
-            <div id="cases-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
-
-            <div id="empty-state" class="hidden text-center py-12 bg-[#1C0118] rounded-2xl border border-dashed border-[#370926]">
-                <i class="fa-solid fa-paw text-4xl text-slate-600 mb-3"></i>
-                <h3 class="text-lg font-medium text-slate-300">Nenhuma ocorrência encontrada</h3>
-                <p class="text-sm text-slate-500 max-w-sm mx-auto mt-1">Tente ajustar os filtros ou registre uma nova ocorrência.</p>
-            </div>
-        </section>
-
-        <!-- TAB 3: MESSAGES VIEW -->
-        <section id="tab-messages-view" class="tab-content hidden space-y-4">
-            <div class="bg-[#1C0118] rounded-2xl shadow-sm border border-[#370926] overflow-hidden min-h-[500px] flex flex-col md:flex-row">
-                <div class="w-full md:w-80 border-r border-[#370926] bg-[#370926]/40 flex flex-col">
-                    <div class="p-4 border-b border-[#370926]">
-                        <h3 class="font-bold text-slate-200 flex items-center gap-2">
-                            <i class="fa-solid fa-comments text-[#6BD425]"></i> Contatos & Conversas
-                        </h3>
-                    </div>
-                    <div id="chat-threads-list" class="flex-1 overflow-y-auto divide-y divide-[#370926] custom-scrollbar"></div>
-                </div>
-
-                <div id="chat-window" class="flex-1 flex flex-col bg-[#1C0118]">
-                    <div id="chat-empty-view" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-500">
-                        <i class="fa-regular fa-paper-plane text-5xl mb-3 text-slate-700"></i>
-                        <p class="font-medium">Selecione uma conversa ou inicie contato através dos cards de ocorrências.</p>
-                    </div>
-
-                    <div id="chat-active-view" class="hidden flex-1 flex flex-col h-full">
-                        <div class="p-4 border-b border-[#370926] flex items-center justify-between bg-[#370926]/30">
-                            <div class="flex items-center gap-3">
-                                <div id="chat-header-avatar" class="w-10 h-10 rounded-full bg-[#6BD425] text-slate-950 flex items-center justify-center font-bold">P</div>
-                                <div>
-                                    <h4 id="chat-header-title" class="font-bold text-slate-100 text-sm">Pet Alert Contact</h4>
-                                    <p id="chat-header-protocol" class="text-xs text-slate-400">Protocolo: ---</p>
-                                </div>
-                            </div>
-                            <span id="chat-header-badge" class="px-2.5 py-1 text-xs font-semibold rounded-full bg-[#370926] text-[#6BD425] border border-[#42113C]">Ref: Ocorrência</span>
-                        </div>
-
-                        <div id="chat-messages-body" class="flex-1 p-4 overflow-y-auto space-y-3 custom-scrollbar bg-slate-950/40"></div>
-
-                        <form id="chat-form" onsubmit="sendChatMessage(event)" class="p-3 border-t border-[#370926] flex gap-2 bg-[#1C0118]">
-                            <input type="text" id="chat-input-text" placeholder="Escreva sua mensagem aqui..." required class="flex-1 px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                            <button type="submit" class="bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 px-5 py-2 rounded-xl text-sm font-semibold transition flex items-center gap-2">
-                                <span>Enviar</span> <i class="fa-solid fa-paper-plane text-xs"></i>
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 4: ADMIN VIEW -->
-        <section id="tab-admin-view" class="tab-content hidden space-y-6">
-            <div class="bg-gradient-to-r from-[#1C0118] via-[#370926] to-[#42113C] rounded-2xl p-6 text-white shadow-lg border border-[#42113C] flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                <div>
-                    <span class="px-3 py-1 bg-white/10 border border-white/20 rounded-full text-xs font-semibold uppercase tracking-wider text-[#6BD425]">PetLink: CadêMeuPet? - Painel de Controle</span>
-                    <h2 class="text-2xl font-bold mt-2">Gestão Geral & Auditoria do Sistema</h2>
-                    <p class="text-slate-300 text-sm">Gerencie todas as ocorrências, altere status e visualize relatórios estatísticos.</p>
-                </div>
-                <button onclick="exportDataCSV()" class="bg-[#370926] hover:bg-[#42113C] text-[#6BD425] px-4 py-2 rounded-xl border border-[#6BD425]/30 text-sm font-medium transition flex items-center gap-2">
-                    <i class="fa-solid fa-file-export"></i> Exportar Dados (CSV)
-                </button>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div class="bg-[#1C0118] p-5 rounded-xl border border-[#370926] shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-400 uppercase">Total Ocorrências</span>
-                        <div class="w-9 h-9 rounded-lg bg-[#370926] text-[#6BD425] flex items-center justify-center"><i class="fa-solid fa-folder-open"></i></div>
-                    </div>
-                    <p id="metric-total" class="text-2xl font-bold text-slate-100 mt-2">0</p>
-                </div>
-
-                <div class="bg-[#1C0118] p-5 rounded-xl border border-[#370926] shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-400 uppercase">Pets Perdidos</span>
-                        <div class="w-9 h-9 rounded-lg bg-[#42113C] text-[#6BD425] flex items-center justify-center"><i class="fa-solid fa-triangle-exclamation"></i></div>
-                    </div>
-                    <p id="metric-lost" class="text-2xl font-bold text-slate-100 mt-2">0</p>
-                </div>
-
-                <div class="bg-[#1C0118] p-5 rounded-xl border border-[#370926] shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-400 uppercase">Pets Encontrados</span>
-                        <div class="w-9 h-9 rounded-lg bg-[#370926] text-[#618B25] flex items-center justify-center"><i class="fa-solid fa-hand-holding-heart"></i></div>
-                    </div>
-                    <p id="metric-found" class="text-2xl font-bold text-slate-100 mt-2">0</p>
-                </div>
-
-                <div class="bg-[#1C0118] p-5 rounded-xl border border-[#370926] shadow-sm">
-                    <div class="flex items-center justify-between">
-                        <span class="text-xs font-bold text-slate-400 uppercase">Reencontrados</span>
-                        <div class="w-9 h-9 rounded-lg bg-[#370926] text-[#6BD425] flex items-center justify-center"><i class="fa-solid fa-circle-check"></i></div>
-                    </div>
-                    <p id="metric-resolved" class="text-2xl font-bold text-slate-100 mt-2">0</p>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div class="bg-[#1C0118] p-5 rounded-2xl border border-[#370926] shadow-sm">
-                    <h3 class="font-bold text-slate-200 text-sm mb-4">Distribuição por Espécies</h3>
-                    <div class="h-64 flex justify-center items-center">
-                        <canvas id="chart-species"></canvas>
-                    </div>
-                </div>
-                <div class="bg-[#1C0118] p-5 rounded-2xl border border-[#370926] shadow-sm">
-                    <h3 class="font-bold text-slate-200 text-sm mb-4">Comparativo de Postagens por Categoria/Espécie</h3>
-                    <div class="h-64 flex justify-center items-center">
-                        <canvas id="chart-species-horizontal"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-[#1C0118] rounded-2xl border border-[#370926] shadow-sm overflow-hidden">
-                <div class="p-4 border-b border-[#370926] flex items-center justify-between">
-                    <h3 class="font-bold text-slate-100 text-base">Gerenciador de Protocolos e Ocorrências</h3>
-                    <span class="text-xs text-slate-400">Ações imediatas de alteração de status e exclusão</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-300">
-                        <thead class="bg-[#370926]/50 text-xs font-bold text-[#6BD425] uppercase border-b border-[#370926]">
-                            <tr>
-                                <th class="p-4">Protocolo</th>
-                                <th class="p-4">Categoria</th>
-                                <th class="p-4">Pet / Espécie</th>
-                                <th class="p-4">Data / Local</th>
-                                <th class="p-4">Tutor / Contato</th>
-                                <th class="p-4">Status</th>
-                                <th class="p-4 text-right">Ações Admin</th>
-                            </tr>
-                        </thead>
-                        <tbody id="admin-table-body" class="divide-y divide-[#370926]"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
 
     </main>
 
-    </div>
-
-    <!-- MODAL: REGISTER -->
-    <div id="modal-register" class="fixed inset-0 z-50 bg-[#1C0118]/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-        <div class="bg-[#1C0118] rounded-3xl shadow-2xl border border-[#42113C] w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar text-slate-100">
-            <div class="p-6 bg-[#370926] text-white sticky top-0 z-10 flex justify-between items-center border-b border-[#42113C]">
+    <div id="modal-details" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full overflow-hidden border border-[#A3C9A8] my-8">
+            <div id="modal-details-header" class="p-6 text-white flex justify-between items-start bg-[#50808E]">
                 <div>
-                    <h3 class="text-xl font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-circle-plus text-[#6BD425]"></i> Registrar Nova Ocorrência
-                    </h3>
-                    <p class="text-xs text-slate-400">Preencha os detalhes do animal perdido ou encontrado</p>
+                    <span id="detail-category-badge" class="bg-white/20 px-3 py-1 rounded-full text-xs font-bold uppercase">Categoria</span>
+                    <h2 id="detail-pet-name" class="text-2xl font-extrabold mt-2">Nome do Pet</h2>
+                    <p id="detail-species-breed" class="text-xs opacity-90 mt-0.5">Espécie • Raça</p>
                 </div>
-                <button onclick="closeRegisterModal()" class="text-slate-400 hover:text-white text-2xl">&times;</button>
-            </div>
-
-            <form id="register-pet-form" onsubmit="handlePetRegistration(event)" class="p-6 space-y-6">
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 uppercase mb-2">Categoria da Ocorrência *</label>
-                    <div class="grid grid-cols-2 gap-4">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="reg-category" value="PERDI" checked class="peer sr-only">
-                            <div class="p-4 rounded-2xl border-2 border-[#370926] peer-checked:border-[#6BD425] peer-checked:bg-[#370926]/40 hover:bg-[#370926]/20 transition text-center">
-                                <i class="fa-solid fa-heart-crack text-2xl text-[#6BD425] mb-1"></i>
-                                <p class="font-bold text-sm text-slate-100">PERDI UM PET</p>
-                                <p class="text-[11px] text-slate-400">Procuro meu animal de estimação</p>
-                            </div>
-                        </label>
-
-                        <label class="cursor-pointer">
-                            <input type="radio" name="reg-category" value="ACHEI" class="peer sr-only">
-                            <div class="p-4 rounded-2xl border-2 border-[#370926] peer-checked:border-[#6BD425] peer-checked:bg-[#370926]/40 hover:bg-[#370926]/20 transition text-center">
-                                <i class="fa-solid fa-hand-holding-heart text-2xl text-[#6BD425] mb-1"></i>
-                                <p class="font-bold text-sm text-slate-100">ACHEI UM PET</p>
-                                <p class="text-[11px] text-slate-400">Encontrei/Avistei um animal perdido</p>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Nome do Pet / Apelido *</label>
-                        <input type="text" id="reg-name" required placeholder="ex: Thor ou 'Sem Nome'" class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Espécie *</label>
-                        <select id="reg-species" required class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                            <option value="Cão">🐶 Cão</option>
-                            <option value="Gato">🐱 Gato</option>
-                            <option value="Ave">🦜 Ave</option>
-                            <option value="Animais de Criação">🐄 Animais de Criação</option>
-                            <option value="Outros">🐾 Outros</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Raça</label>
-                        <input type="text" id="reg-breed" placeholder="ex: Vira-lata, Siamês, Nelore" class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Cor Predominante *</label>
-                        <input type="text" id="reg-color" required placeholder="ex: Caramelo, Preto, Branco e Marrom" class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Data da Ocorrência *</label>
-                        <input type="date" id="reg-date" required class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-300 uppercase">Localização da Ocorrência (Google Maps) *</label>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
-                        <div class="md:col-span-2">
-                            <input type="text" id="reg-address" required placeholder="Endereço / Bairro / Ponto de referência" class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                        </div>
-                        <div>
-                            <input type="text" id="reg-coords" readonly value="Itapetininga, SP" class="w-full px-3 py-2 text-xs border border-[#370926] bg-[#370926]/50 rounded-xl text-slate-400">
-                        </div>
-                    </div>
-                    <div class="form-map-container border border-[#370926] rounded-xl overflow-hidden bg-[#370926]">
-                        <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3675.2906123456!2d-48.0512!3d-23.5905!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x94c5cc70ba456a65%3A0x770be09241987369!2sItapetininga%2C%20SP!5e0!3m2!1spt-BR!2sbr!4v1789348722913!5m2!1spt-BR!2sbr" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>
-                    </div>
-                </div>
-
-                <div class="space-y-2">
-                    <label class="block text-xs font-bold text-slate-300 uppercase">Foto do Pet (URL de Imagem)</label>
-                    <div class="flex gap-2">
-                    <input type="url" id="reg-photo" onchange="previewRegistrationPhoto()" placeholder="https://exemplo.com/foto.jpg" class="flex-1 px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                    <button type="button" onclick="loadSamplePhoto()" class="px-3 py-2 text-xs bg-[#370926] hover:bg-[#42113C] text-slate-200 font-semibold rounded-xl border border-[#42113C]">Foto Exemplo</button>
-                </div>
-                <div id="photo-preview-container" class="hidden mt-2 flex justify-center">
-                    <img id="photo-preview" src="" alt="Preview" class="h-32 object-cover rounded-xl border border-[#370926]">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Telefone / WhatsApp Contato *</label>
-                    <input type="tel" id="reg-contact" required placeholder="(15) 99999-9999" class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Recompensa (Opcional)</label>
-                    <input type="text" id="reg-reward" placeholder="ex: R$ 200,00 ou Não há" class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-bold text-slate-300 uppercase mb-1">Descrição Detalhada / Marcas de Identificação</label>
-                <textarea id="reg-description" rows="3" placeholder="Ex: Coleira vermelha com pingente..." class="w-full px-4 py-2 text-sm bg-[#370926] border border-[#42113C] text-white rounded-xl focus:ring-2 focus:ring-[#6BD425] outline-none"></textarea>
-            </div>
-
-            <div class="pt-2 flex justify-end gap-3">
-                <button type="button" onclick="closeRegisterModal()" class="px-5 py-2.5 rounded-xl border border-[#42113C] text-sm font-semibold text-slate-300 hover:bg-[#370926]">Cancelar</button>
-                <button type="submit" class="px-6 py-2.5 rounded-xl bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 text-sm font-bold shadow-md transition">
-                    Gerar Protocolo & Publicar
+                <button onclick="closeDetailsModal()" class="bg-white/20 hover:bg-white/30 text-white w-8 h-8 rounded-full flex items-center justify-center transition">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
-        </form>
-    </div>
-</div>
-
-<!-- MODAL: DETAILS -->
-<div id="modal-details" class="fixed inset-0 z-50 bg-[#1C0118]/80 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-[#1C0118] rounded-3xl shadow-2xl border border-[#42113C] w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col text-slate-100">
-        <div id="modal-details-header" class="p-6 text-white flex justify-between items-start bg-gradient-to-r from-[#42113C] to-[#370926]">
-            <div>
-                <div class="flex items-center gap-2">
-                    <span id="detail-category-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-white/20">PERDI</span>
-                    <span id="detail-protocol" class="text-xs text-white/80 font-mono">PRT-00000</span>
-                </div>
-                <h3 id="detail-pet-name" class="text-2xl font-bold mt-1">Nome do Pet</h3>
-                <p id="detail-species-breed" class="text-xs text-white/80">Espécie / Raça</p>
-            </div>
-            <button onclick="closeDetailsModal()" class="text-white/80 hover:text-white text-2xl">&times;</button>
-        </div>
-
-        <div class="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
-            <div class="flex flex-col sm:flex-row gap-4">
-                <img id="detail-image" src="" alt="Pet" class="w-full sm:w-48 h-48 object-cover rounded-2xl border border-[#370926]">
-                <div class="space-y-2 flex-1 text-sm">
-                    <div class="bg-[#370926] p-3 rounded-xl border border-[#42113C] space-y-1">
-                        <p class="text-xs font-bold text-slate-400 uppercase">Local da Ocorrência</p>
-                        <p id="detail-location" class="font-semibold text-slate-200"><i class="fa-solid fa-location-dot text-[#6BD425] mr-1"></i> Endereço</p>
+            <div class="p-6 space-y-4">
+                <img id="detail-image" src="" alt="Pet" class="w-full h-64 object-cover rounded-2xl border border-[#A3C9A8]" onerror="this.src='https://placehold.co/600x400/A3C9A8/333333?text=Pet'">
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-[#f0f5f7] p-4 rounded-2xl border border-[#A3C9A8]">
+                    <div>
+                        <p class="text-slate-500 font-medium">Protocolo:</p>
+                        <p id="detail-protocol" class="font-bold text-slate-800 font-mono text-sm">PRT-00000</p>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
-                        <div class="bg-[#370926] p-3 rounded-xl border border-[#42113C]">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase">Data</p>
-                            <p id="detail-date" class="font-semibold text-slate-200 text-xs">00/00/0000</p>
-                        </div>
-                        <div class="bg-[#370926] p-3 rounded-xl border border-[#42113C]">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase">Status</p>
-                            <p id="detail-status" class="font-bold text-xs text-[#6BD425]">Em Busca</p>
-                        </div>
+                    <div>
+                        <p class="text-slate-500 font-medium">Status Atual:</p>
+                        <p id="detail-status" class="font-bold text-[#50808E]">Em Busca</p>
                     </div>
-                    <div id="detail-reward-box" class="hidden bg-[#370926] border border-[#6BD425]/40 p-2.5 rounded-xl text-emerald-200 text-xs font-bold flex items-center gap-2">
-                        <i class="fa-solid fa-trophy text-[#6BD425] text-base"></i>
-                        <span>Recompensa: <span id="detail-reward-val">R$ 0,00</span></span>
+                    <div>
+                        <p class="text-slate-500 font-medium">Data do Ocorrido:</p>
+                        <p id="detail-date" class="font-bold text-slate-800">2026-03-10</p>
+                    </div>
+                    <div>
+                        <p class="text-slate-500 font-medium">Tutor / Responsável:</p>
+                        <p id="detail-reporter-name" class="font-bold text-slate-800">Nome</p>
                     </div>
                 </div>
-            </div>
 
-            <div>
-                <h4 class="text-xs font-bold text-slate-400 uppercase mb-1">Descrição e Detalhes</h4>
-                <p id="detail-description" class="text-sm text-slate-300 bg-[#370926] p-3 rounded-xl border border-[#42113C]">Sem descrição detalhada.</p>
-            </div>
-
-            <div class="border-t border-[#370926] pt-3 flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div class="text-xs text-slate-400">
-                    <span>Registrado por: </span>
-                    <strong id="detail-reporter-name" class="text-slate-200">Tutor</strong>
+                <div>
+                    <p class="text-xs font-bold text-slate-700 mb-1">Localização:</p>
+                    <p id="detail-location" class="text-xs text-slate-800 bg-[#DDD8C4]/30 p-3 rounded-xl border border-[#A3C9A8]"><i class="fa-solid fa-location-dot text-[#50808E]"></i> Endereço</p>
                 </div>
 
-                <div class="flex gap-2 w-full sm:w-auto">
-                    <button id="btn-start-chat" onclick="startChatFromDetails()" class="flex-1 sm:flex-initial bg-[#6BD425] hover:bg-[#58b21e] text-slate-950 font-bold px-4 py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 shadow-md">
-                        <i class="fa-solid fa-comment-dots"></i> Enviar Mensagem
+                <div>
+                    <p class="text-xs font-bold text-slate-700 mb-1">Descrição / Características:</p>
+                    <p id="detail-description" class="text-xs text-slate-600 leading-relaxed bg-white p-3 rounded-xl border border-[#DDD8C4]">Descrição detalhada</p>
+                </div>
+
+                <div id="detail-reward-box" class="hidden bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center justify-between">
+                    <div>
+                        <p class="text-[11px] text-amber-800 font-semibold uppercase">Recompensa Oferecida</p>
+                        <h4 id="detail-reward-val" class="text-base font-extrabold text-amber-900">R$ 0,00</h4>
+                    </div>
+                    <i class="fa-solid fa-award text-2xl text-amber-600"></i>
+                </div>
+
+                <div class="pt-4 border-t border-[#DDD8C4] flex gap-3">
+                    <button onclick="openChatWithPet(activeDetailPet.id)" class="flex-1 bg-[#50808E] hover:bg-[#3f6672] text-white py-3 rounded-xl text-xs font-bold transition shadow-sm text-center">
+                        <i class="fa-solid fa-comments mr-2"></i> Enviar Mensagem / Pista ao Tutor
+                    </button>
+                    <button onclick="closeDetailsModal()" class="px-6 bg-[#DDD8C4] hover:bg-[#ccc7b2] text-slate-800 py-3 rounded-xl text-xs font-bold transition">
+                        Fechar
                     </button>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<script>
-function quickLogin(role) {
-    const user = {
-        name: role === 'ADMIN' ? 'Administrador' : 'Usuário',
-        email: role === 'ADMIN' ? 'admin@petlink.com' : 'tutor@petlink.com',
-        role: role
-    };
+    <!-- Edit Pet Modal -->
+    <div id="modal-edit-pet" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-[#A3C9A8]">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-4">Editar Ocorrência</h3>
+            <form onsubmit="handleEditPetSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nome do Pet</label>
+                    <input type="text" id="edit-pet-name" required class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Raça</label>
+                        <input type="text" id="edit-pet-breed" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Cor</label>
+                        <input type="text" id="edit-pet-color" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Status</label>
+                        <select id="edit-pet-status" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs font-medium">
+                            <option value="Em Busca">Em Busca</option>
+                            <option value="Aguardando Tutor">Aguardando Tutor</option>
+                            <option value="Reencontrado">Reencontrado 🎉</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Recompensa</label>
+                        <input type="text" id="edit-pet-reward" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Descrição</label>
+                    <textarea id="edit-pet-description" rows="3" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs"></textarea>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-[#50808E] hover:bg-[#3f6672] text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">Salvar Alterações</button>
+                    <button type="button" onclick="closeEditPetModal()" class="px-5 bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    sessionStorage.setItem('petlink_user', JSON.stringify(user));
+    <!-- Register Account Modal -->
+    <div id="modal-register-account" class="hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-[#A3C9A8]">
+            <h3 class="text-lg font-extrabold text-slate-900 mb-2">Criar Nova Conta de Tutor</h3>
+            <p class="text-xs text-slate-600 mb-4">Insira seus dados para gerenciar ocorrências e conversar com outros tutores.</p>
+            <form id="form-register-account" onsubmit="handleCreateAccount(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Nome Completo *</label>
+                    <input type="text" id="reg-acc-name" required placeholder="Ex: Ana Souza" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">E-mail *</label>
+                    <input type="email" id="reg-acc-email" required placeholder="seu@email.com" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Senha (Mín. 8 dígitos, 1 maiúscula, 1 número) *</label>
+                    <input type="password" id="reg-acc-password" required placeholder="••••••••" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Telefone / WhatsApp *</label>
+                        <input type="text" id="reg-acc-phone" required placeholder="(15) 99999-9999" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Cidade *</label>
+                        <input type="text" id="reg-acc-city" required placeholder="Itapetininga" class="w-full bg-[#DDD8C4]/20 border border-[#A3C9A8] rounded-xl px-3 py-2.5 text-xs">
+                    </div>
+                </div>
+                <div id="reg-acc-error" class="hidden text-xs text-red-600 font-medium"></div>
+                <div class="flex gap-2 pt-2">
+                    <button type="submit" class="flex-1 bg-[#50808E] hover:bg-[#3f6672] text-white py-2.5 rounded-xl text-xs font-bold shadow-sm">Cadastrar Conta</button>
+                    <button type="button" onclick="closeRegisterAccountModal()" class="px-5 bg-slate-200 text-slate-700 py-2.5 rounded-xl text-xs font-bold">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-
-    updateUserInterface(user);
-}
-
-function handleLoginSubmit(event) {
-    event.preventDefault();
-
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const role = document.getElementById('login-role').value;
-
-    if (!email || !password) {
-        showGlobalAlert('Preencha o e-mail e a senha.', 'error');
-        return;
-    }
-
-    const user = {
-        name: email.split('@')[0],
-        email: email,
-        role: role
-    };
-
-    sessionStorage.setItem('petlink_user', JSON.stringify(user));
-
-    document.getElementById('auth-screen').classList.add('hidden');
-    document.getElementById('app-container').classList.remove('hidden');
-
-    updateUserInterface(user);
-}
-
-function updateUserInterface(user) {
-    document.getElementById('user-profile-badge').classList.remove('hidden');
-    document.getElementById('user-profile-badge').classList.add('flex');
-
-    document.getElementById('user-name-display').textContent = user.name;
-    document.getElementById('user-role-badge').textContent = user.role;
-    document.getElementById('user-avatar-initials').textContent =
-        user.name.charAt(0).toUpperCase();
-
-    if (user.role === 'ADMIN') {
-        document.getElementById('nav-btn-admin').classList.remove('hidden');
-        document.getElementById('mobile-nav-admin').classList.remove('hidden');
-    }
-}
-
-function logout() {
-    sessionStorage.removeItem('petlink_user');
-
-    document.getElementById('app-container').classList.add('hidden');
-    document.getElementById('auth-screen').classList.remove('hidden');
-}
-
-document.addEventListener('DOMContentLoaded', function () {
-    const savedUser = sessionStorage.getItem('petlink_user');
-
-    if (savedUser) {
-        const user = JSON.parse(savedUser);
-
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('app-container').classList.remove('hidden');
-
-        updateUserInterface(user);
-    }
-});
-</script>
-
+    <script>
+        window.onload = function() {
+            initMaps();
+            applyFilters();
+        };
+    </script>
 </body>
 </html>
